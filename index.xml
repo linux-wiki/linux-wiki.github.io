@@ -6,17 +6,23 @@
       <description>Last 10 notes on Quartz 4</description>
       <generator>Quartz -- quartz.jzhao.xyz</generator>
       <item>
+    <title>RCU</title>
+    <link>https://quartz.jzhao.xyz/linux-kernel/RCU</link>
+    <guid>https://quartz.jzhao.xyz/linux-kernel/RCU</guid>
+    <description><![CDATA[ RCU是什么 RCU（Read-Copy-Update）是一种面向读多写少场景的并发同步机制： 读操作几乎无锁，写操作通过“复制 + 延迟回收”保证一致性 它的核心思想不是“阻止冲突”，而是： 允许读线程并发读旧数据 写线程生成新版本 旧版本延迟释放，等所有读者结束后再回收 ⚠️ 边界很重要 RCU 解决的是： 读多写少的数据一致性问题 RCU 不适合： 强一致写写互斥 需要实时看到最新值的逻辑 RCU 解决什么问题 在没有 RCU 之前，内核常见同步方式： 方法问题spinlock读也被阻塞，性能差rwlock读可以并发，但写仍然阻塞读mutex太重 典型痛点场景 例如： dentry 缓存... ]]></description>
+    <pubDate>Sat, 09 May 2026 08:09:50 GMT</pubDate>
+  </item><item>
+    <title>index</title>
+    <link>https://quartz.jzhao.xyz/linux-kernel/</link>
+    <guid>https://quartz.jzhao.xyz/linux-kernel/</guid>
+    <description><![CDATA[ 基础概念 RCU. ]]></description>
+    <pubDate>Sat, 09 May 2026 07:52:28 GMT</pubDate>
+  </item><item>
     <title>index</title>
     <link>https://quartz.jzhao.xyz/</link>
     <guid>https://quartz.jzhao.xyz/</guid>
     <description><![CDATA[ Linux开发文档 Linux内核文档 linux-kernel. ]]></description>
-    <pubDate>Sat, 09 May 2026 07:45:35 GMT</pubDate>
-  </item><item>
-    <title>README</title>
-    <link>https://quartz.jzhao.xyz/README</link>
-    <guid>https://quartz.jzhao.xyz/README</guid>
-    <description><![CDATA[ Linux开发文档 Linux内核文档 linux-kernel. ]]></description>
-    <pubDate>Sat, 09 May 2026 07:45:33 GMT</pubDate>
+    <pubDate>Sat, 09 May 2026 07:49:11 GMT</pubDate>
   </item>
     </channel>
   </rss>
