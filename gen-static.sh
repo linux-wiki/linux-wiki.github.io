@@ -1,2 +1,2 @@
 #!/bin/bash
-npx quartz sync
+npx quartz build
