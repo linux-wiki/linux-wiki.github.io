@@ -1,34 +1,34 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <rss version="2.0">
     <channel>
-      <title>Quartz 4</title>
+      <title>Linux Wiki</title>
       <link>https://quartz.jzhao.xyz</link>
-      <description>Last 10 notes on Quartz 4</description>
+      <description>最近的10条笔记 on Linux Wiki</description>
       <generator>Quartz -- quartz.jzhao.xyz</generator>
       <item>
+    <title>Linux内存管理管理概述</title>
+    <link>https://quartz.jzhao.xyz/linux-kernel/Linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E7%AE%A1%E7%90%86%E6%A6%82%E8%BF%B0</link>
+    <guid>https://quartz.jzhao.xyz/linux-kernel/Linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E7%AE%A1%E7%90%86%E6%A6%82%E8%BF%B0</guid>
+    <description><![CDATA[  Linux 内存管理 不是设计一个严格分层架构，而是：把“内存这件事”拆成多个独立子系统，每个解决一个问题，然后通过 struct page / VMA / folio 串起来 ┌────────────────────────────────────────────┐ │ 用户空间系统调用 │ │ mmap/munmap/mprotect/madvise/mlock/mremap/userfaultfd │ └────────────────────────────────────────────┘ ↓ ┌──────────────────────────────────────────... ]]></description>
+    <pubDate>Mon, 11 May 2026 09:19:54 GMT</pubDate>
+  </item><item>
+    <title>RCU</title>
+    <link>https://quartz.jzhao.xyz/linux-kernel/RCU</link>
+    <guid>https://quartz.jzhao.xyz/linux-kernel/RCU</guid>
+    <description><![CDATA[ RCU是什么 RCU（Read-Copy-Update）是一种面向读多写少场景的并发同步机制： 读操作几乎无锁，写操作通过“复制 + 延迟回收”保证一致性 它的核心思想不是“阻止冲突”，而是： 允许读线程并发读旧数据 写线程生成新版本 旧版本延迟释放，等所有读者结束后再回收 ⚠️ 边界很重要 RCU 解决的是： 读多写少的数据一致性问题 RCU 不适合： 强一致写写互斥 需要实时看到最新值的逻辑 RCU 解决什么问题 在没有 RCU 之前，内核常见同步方式： 方法问题spinlock读也被阻塞，性能差rwlock读可以并发，但写仍然阻塞读mutex太重 典型痛点场景 例如： dentry 缓存... ]]></description>
+    <pubDate>Mon, 11 May 2026 08:12:54 GMT</pubDate>
+  </item><item>
     <title>引用计数(Ref)</title>
     <link>https://quartz.jzhao.xyz/linux-kernel/%E5%BC%95%E7%94%A8%E8%AE%A1%E6%95%B0(Ref)</link>
     <guid>https://quartz.jzhao.xyz/linux-kernel/%E5%BC%95%E7%94%A8%E8%AE%A1%E6%95%B0(Ref)</guid>
     <description><![CDATA[ 什么是引用计数 struct kref 是 Linux 内核中的 通用引用计数对象，用于管理对象生命周期，防止对象被提前释放。 它本质上是对 refcount_t 的封装 核心目标：”谁使用对象，谁持有引用；不用时释放引用；最后一个引用负责释放对象“ 适用于： inode dentry 私有对象 file 对象 netfilter 对象 驱动设备对象 RCU 延迟释放对象 典型生命周期 创建对象 ↓ kref_init() ↓ 别人使用 -&gt; kref_get() ↓ 不用了 -&gt; kref_put() ↓ 最后一次 put -&gt; release() 回调 ↓ kfree()... ]]></description>
-    <pubDate>Mon, 11 May 2026 07:36:29 GMT</pubDate>
-  </item><item>
-    <title>index</title>
-    <link>https://quartz.jzhao.xyz/linux-kernel/</link>
-    <guid>https://quartz.jzhao.xyz/linux-kernel/</guid>
-    <description><![CDATA[ 基础概念 RCU 引用计数(Ref) . ]]></description>
-    <pubDate>Mon, 11 May 2026 07:16:31 GMT</pubDate>
+    <pubDate>Mon, 11 May 2026 08:12:45 GMT</pubDate>
   </item><item>
     <title>linux-kernel</title>
     <link>https://quartz.jzhao.xyz/linux-kernel</link>
     <guid>https://quartz.jzhao.xyz/linux-kernel</guid>
     <description><![CDATA[  ]]></description>
     <pubDate>Mon, 11 May 2026 07:15:58 GMT</pubDate>
-  </item><item>
-    <title>RCU</title>
-    <link>https://quartz.jzhao.xyz/linux-kernel/RCU</link>
-    <guid>https://quartz.jzhao.xyz/linux-kernel/RCU</guid>
-    <description><![CDATA[ RCU是什么 RCU（Read-Copy-Update）是一种面向读多写少场景的并发同步机制： 读操作几乎无锁，写操作通过“复制 + 延迟回收”保证一致性 它的核心思想不是“阻止冲突”，而是： 允许读线程并发读旧数据 写线程生成新版本 旧版本延迟释放，等所有读者结束后再回收 ⚠️ 边界很重要 RCU 解决的是： 读多写少的数据一致性问题 RCU 不适合： 强一致写写互斥 需要实时看到最新值的逻辑 RCU 解决什么问题 在没有 RCU 之前，内核常见同步方式： 方法问题spinlock读也被阻塞，性能差rwlock读可以并发，但写仍然阻塞读mutex太重 典型痛点场景 例如： dentry 缓存... ]]></description>
-    <pubDate>Mon, 11 May 2026 07:12:26 GMT</pubDate>
   </item><item>
     <title>index</title>
     <link>https://quartz.jzhao.xyz/</link>
