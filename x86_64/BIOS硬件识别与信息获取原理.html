@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr"><head><title>BIOS硬件识别与信息获取原理</title><meta charset="utf-8"/><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com"/><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted Grotesk:wght@400;700&amp;family=Source Sans Pro:ital,wght@0,400;0,600;1,400;1,600&amp;family=IBM Plex Mono:wght@400;600&amp;display=swap"/><link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin="anonymous"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="og:site_name" content="Linux Wiki"/><meta property="og:title" content="BIOS硬件识别与信息获取原理"/><meta property="og:type" content="website"/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:title" content="BIOS硬件识别与信息获取原理"/><meta name="twitter:description" content="BIOS 硬件识别与信息获取原理 1."/><meta property="og:description" content="BIOS 硬件识别与信息获取原理 1."/><meta property="og:image:alt" content="BIOS 硬件识别与信息获取原理 1."/><meta property="twitter:domain" content="quartz.jzhao.xyz"/><meta property="og:url" content="https://quartz.jzhao.xyz/x86_64/BIOS硬件识别与信息获取原理"/><meta property="twitter:url" content="https://quartz.jzhao.xyz/x86_64/BIOS硬件识别与信息获取原理"/><link rel="icon" href="../static/icon.png"/><meta name="description" content="BIOS 硬件识别与信息获取原理 1."/><meta name="generator" content="Quartz"/><link href="../index.css" rel="stylesheet" type="text/css" data-persist="true"/><style>.expand-button {
+  position: absolute;
+  display: flex;
+  float: right;
+  padding: 0.4rem;
+  margin: 0.3rem;
+  right: 0;
+  color: var(--gray);
+  border-color: var(--dark);
+  background-color: var(--light);
+  border: 1px solid;
+  border-radius: 5px;
+  opacity: 0;
+  transition: 0.2s;
+}
+.expand-button > svg {
+  fill: var(--light);
+  filter: contrast(0.3);
+}
+.expand-button:hover {
+  cursor: pointer;
+  border-color: var(--secondary);
+}
+.expand-button:focus {
+  outline: 0;
+}
+
+pre:hover > .expand-button {
+  opacity: 1;
+  transition: 0.2s;
+}
+
+#mermaid-container {
+  position: fixed;
+  contain: layout;
+  z-index: 999;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: none;
+  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.5);
+}
+#mermaid-container.active {
+  display: inline-block;
+}
+#mermaid-container > #mermaid-space {
+  border: 1px solid var(--lightgray);
+  background-color: var(--light);
+  border-radius: 5px;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  height: 80vh;
+  width: 80vw;
+  overflow: hidden;
+}
+#mermaid-container > #mermaid-space > .mermaid-content {
+  position: relative;
+  transform-origin: 0 0;
+  transition: transform 0.1s ease;
+  overflow: visible;
+  min-height: 200px;
+  min-width: 200px;
+}
+#mermaid-container > #mermaid-space > .mermaid-content pre {
+  margin: 0;
+  border: none;
+}
+#mermaid-container > #mermaid-space > .mermaid-content svg {
+  max-width: none;
+  height: auto;
+}
+#mermaid-container > #mermaid-space > .mermaid-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  background: var(--light);
+  border: 1px solid var(--lightgray);
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 2;
+}
+#mermaid-container > #mermaid-space > .mermaid-controls .mermaid-control-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--lightgray);
+  background: var(--light);
+  color: var(--dark);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-family: var(--bodyFont);
+  transition: all 0.2s ease;
+}
+#mermaid-container > #mermaid-space > .mermaid-controls .mermaid-control-button:hover {
+  background: var(--lightgray);
+}
+#mermaid-container > #mermaid-space > .mermaid-controls .mermaid-control-button:active {
+  transform: translateY(1px);
+}
+#mermaid-container > #mermaid-space > .mermaid-controls .mermaid-control-button:nth-child(2) {
+  width: auto;
+  padding: 0 12px;
+  font-size: 14px;
+}
+/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VSb290IjoiL2RhdGEvd2lraS9teS13aWtpL3F1YXJ0ei9jb21wb25lbnRzL3N0eWxlcyIsInNvdXJjZXMiOlsibWVybWFpZC5pbmxpbmUuc2NzcyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUFBQTtFQUNFO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBOztBQUVBO0VBQ0U7RUFDQTs7QUFHRjtFQUNFO0VBQ0E7O0FBR0Y7RUFDRTs7O0FBS0Y7RUFDRTtFQUNBOzs7QUFJSjtFQUNFO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7O0FBRUE7RUFDRTs7QUFHRjtFQUNFO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBOztBQUVBO0VBQ0U7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBOztBQUVBO0VBQ0U7RUFDQTs7QUFHRjtFQUNFO0VBQ0E7O0FBSUo7RUFDRTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBOztBQUVBO0VBQ0U7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTs7QUFFQTtFQUNFOztBQUdGO0VBQ0U7O0FBSUY7RUFDRTtFQUNBO0VBQ0EiLCJzb3VyY2VzQ29udGVudCI6WyIuZXhwYW5kLWJ1dHRvbiB7XG4gIHBvc2l0aW9uOiBhYnNvbHV0ZTtcbiAgZGlzcGxheTogZmxleDtcbiAgZmxvYXQ6IHJpZ2h0O1xuICBwYWRkaW5nOiAwLjRyZW07XG4gIG1hcmdpbjogMC4zcmVtO1xuICByaWdodDogMDsgLy8gTk9URTogcmlnaHQgd2lsbCBiZSBzZXQgaW4gbWVybWFpZC5pbmxpbmUudHNcbiAgY29sb3I6IHZhcigtLWdyYXkpO1xuICBib3JkZXItY29sb3I6IHZhcigtLWRhcmspO1xuICBiYWNrZ3JvdW5kLWNvbG9yOiB2YXIoLS1saWdodCk7XG4gIGJvcmRlcjogMXB4IHNvbGlkO1xuICBib3JkZXItcmFkaXVzOiA1cHg7XG4gIG9wYWNpdHk6IDA7XG4gIHRyYW5zaXRpb246IDAuMnM7XG5cbiAgJiA+IHN2ZyB7XG4gICAgZmlsbDogdmFyKC0tbGlnaHQpO1xuICAgIGZpbHRlcjogY29udHJhc3QoMC4zKTtcbiAgfVxuXG4gICY6aG92ZXIge1xuICAgIGN1cnNvcjogcG9pbnRlcjtcbiAgICBib3JkZXItY29sb3I6IHZhcigtLXNlY29uZGFyeSk7XG4gIH1cblxuICAmOmZvY3VzIHtcbiAgICBvdXRsaW5lOiAwO1xuICB9XG59XG5cbnByZSB7XG4gICY6aG92ZXIgPiAuZXhwYW5kLWJ1dHRvbiB7XG4gICAgb3BhY2l0eTogMTtcbiAgICB0cmFuc2l0aW9uOiAwLjJzO1xuICB9XG59XG5cbiNtZXJtYWlkLWNvbnRhaW5lciB7XG4gIHBvc2l0aW9uOiBmaXhlZDtcbiAgY29udGFpbjogbGF5b3V0O1xuICB6LWluZGV4OiA5OTk7XG4gIGxlZnQ6IDA7XG4gIHRvcDogMDtcbiAgd2lkdGg6IDEwMHZ3O1xuICBoZWlnaHQ6IDEwMHZoO1xuICBvdmVyZmxvdzogaGlkZGVuO1xuICBkaXNwbGF5OiBub25lO1xuICBiYWNrZHJvcC1maWx0ZXI6IGJsdXIoNHB4KTtcbiAgYmFja2dyb3VuZDogcmdiYSgwLCAwLCAwLCAwLjUpO1xuXG4gICYuYWN0aXZlIHtcbiAgICBkaXNwbGF5OiBpbmxpbmUtYmxvY2s7XG4gIH1cblxuICAmID4gI21lcm1haWQtc3BhY2Uge1xuICAgIGJvcmRlcjogMXB4IHNvbGlkIHZhcigtLWxpZ2h0Z3JheSk7XG4gICAgYmFja2dyb3VuZC1jb2xvcjogdmFyKC0tbGlnaHQpO1xuICAgIGJvcmRlci1yYWRpdXM6IDVweDtcbiAgICBwb3NpdGlvbjogZml4ZWQ7XG4gICAgdG9wOiA1MCU7XG4gICAgbGVmdDogNTAlO1xuICAgIHRyYW5zZm9ybTogdHJhbnNsYXRlKC01MCUsIC01MCUpO1xuICAgIGhlaWdodDogODB2aDtcbiAgICB3aWR0aDogODB2dztcbiAgICBvdmVyZmxvdzogaGlkZGVuO1xuXG4gICAgJiA+IC5tZXJtYWlkLWNvbnRlbnQge1xuICAgICAgcG9zaXRpb246IHJlbGF0aXZlO1xuICAgICAgdHJhbnNmb3JtLW9yaWdpbjogMCAwO1xuICAgICAgdHJhbnNpdGlvbjogdHJhbnNmb3JtIDAuMXMgZWFzZTtcbiAgICAgIG92ZXJmbG93OiB2aXNpYmxlO1xuICAgICAgbWluLWhlaWdodDogMjAwcHg7XG4gICAgICBtaW4td2lkdGg6IDIwMHB4O1xuXG4gICAgICBwcmUge1xuICAgICAgICBtYXJnaW46IDA7XG4gICAgICAgIGJvcmRlcjogbm9uZTtcbiAgICAgIH1cblxuICAgICAgc3ZnIHtcbiAgICAgICAgbWF4LXdpZHRoOiBub25lO1xuICAgICAgICBoZWlnaHQ6IGF1dG87XG4gICAgICB9XG4gICAgfVxuXG4gICAgJiA+IC5tZXJtYWlkLWNvbnRyb2xzIHtcbiAgICAgIHBvc2l0aW9uOiBhYnNvbHV0ZTtcbiAgICAgIGJvdHRvbTogMjBweDtcbiAgICAgIHJpZ2h0OiAyMHB4O1xuICAgICAgZGlzcGxheTogZmxleDtcbiAgICAgIGdhcDogOHB4O1xuICAgICAgcGFkZGluZzogOHB4O1xuICAgICAgYmFja2dyb3VuZDogdmFyKC0tbGlnaHQpO1xuICAgICAgYm9yZGVyOiAxcHggc29saWQgdmFyKC0tbGlnaHRncmF5KTtcbiAgICAgIGJvcmRlci1yYWRpdXM6IDZweDtcbiAgICAgIGJveC1zaGFkb3c6IDAgMnB4IDRweCByZ2JhKDAsIDAsIDAsIDAuMSk7XG4gICAgICB6LWluZGV4OiAyO1xuXG4gICAgICAubWVybWFpZC1jb250cm9sLWJ1dHRvbiB7XG4gICAgICAgIGRpc3BsYXk6IGZsZXg7XG4gICAgICAgIGFsaWduLWl0ZW1zOiBjZW50ZXI7XG4gICAgICAgIGp1c3RpZnktY29udGVudDogY2VudGVyO1xuICAgICAgICB3aWR0aDogMzJweDtcbiAgICAgICAgaGVpZ2h0OiAzMnB4O1xuICAgICAgICBwYWRkaW5nOiAwO1xuICAgICAgICBib3JkZXI6IDFweCBzb2xpZCB2YXIoLS1saWdodGdyYXkpO1xuICAgICAgICBiYWNrZ3JvdW5kOiB2YXIoLS1saWdodCk7XG4gICAgICAgIGNvbG9yOiB2YXIoLS1kYXJrKTtcbiAgICAgICAgYm9yZGVyLXJhZGl1czogNHB4O1xuICAgICAgICBjdXJzb3I6IHBvaW50ZXI7XG4gICAgICAgIGZvbnQtc2l6ZTogMTZweDtcbiAgICAgICAgZm9udC1mYW1pbHk6IHZhcigtLWJvZHlGb250KTtcbiAgICAgICAgdHJhbnNpdGlvbjogYWxsIDAuMnMgZWFzZTtcblxuICAgICAgICAmOmhvdmVyIHtcbiAgICAgICAgICBiYWNrZ3JvdW5kOiB2YXIoLS1saWdodGdyYXkpO1xuICAgICAgICB9XG5cbiAgICAgICAgJjphY3RpdmUge1xuICAgICAgICAgIHRyYW5zZm9ybTogdHJhbnNsYXRlWSgxcHgpO1xuICAgICAgICB9XG5cbiAgICAgICAgLy8gU3R5bGUgdGhlIHJlc2V0IGJ1dHRvbiBkaWZmZXJlbnRseVxuICAgICAgICAmOm50aC1jaGlsZCgyKSB7XG4gICAgICAgICAgd2lkdGg6IGF1dG87XG4gICAgICAgICAgcGFkZGluZzogMCAxMnB4O1xuICAgICAgICAgIGZvbnQtc2l6ZTogMTRweDtcbiAgICAgICAgfVxuICAgICAgfVxuICAgIH1cbiAgfVxufVxuIl19 */</style><link href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" rel="stylesheet" type="text/css" data-persist="true"/><script src="../prescript.js" type="application/javascript" data-persist="true"></script><script type="application/javascript" data-persist="true">const fetchData = fetch("../static/contentIndex.json").then(data => data.json())</script><link rel="alternate" type="application/rss+xml" title="RSS Feed" href="https://quartz.jzhao.xyz/index.xml"/><meta property="og:image:width" content="1200"/><meta property="og:image:height" content="630"/><meta property="og:image" content="https://quartz.jzhao.xyz/x86_64/BIOS硬件识别与信息获取原理-og-image.webp"/><meta property="og:image:url" content="https://quartz.jzhao.xyz/x86_64/BIOS硬件识别与信息获取原理-og-image.webp"/><meta name="twitter:image" content="https://quartz.jzhao.xyz/x86_64/BIOS硬件识别与信息获取原理-og-image.webp"/><meta property="og:image:type" content="image/.webp"/></head><body data-slug="x86_64/BIOS硬件识别与信息获取原理"><div id="quartz-root" class="page"><div id="quartz-body"><div class="left sidebar"><h2 class="page-title"><a href="..">Linux Wiki</a></h2><div class="spacer mobile-only"></div><div class="flex-component" style="flex-direction: row; flex-wrap: nowrap; gap: 1rem;"><div style="flex-grow: 1; flex-shrink: 1; flex-basis: auto; order: 0; align-self: center; justify-self: center;"><div class="search"><button class="search-button"><svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 19.9 19.7"><title>Search</title><g class="search-path" fill="none"><path stroke-linecap="square" d="M18.5 18.3l-5.4-5.4"></path><circle cx="8" cy="8" r="7"></circle></g></svg><p>搜索</p></button><div class="search-container"><div class="search-space"><input autocomplete="off" class="search-bar" name="search" type="text" aria-label="搜索些什么" placeholder="搜索些什么"/><div class="search-layout" data-preview="true"></div></div></div></div></div><div style="flex-grow: 0; flex-shrink: 1; flex-basis: auto; order: 0; align-self: center; justify-self: center;"><button class="darkmode"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" class="dayIcon" x="0px" y="0px" viewBox="0 0 35 35" style="enable-background:new 0 0 35 35" xml:space="preserve" aria-label="暗色模式"><title>暗色模式</title><path d="M6,17.5C6,16.672,5.328,16,4.5,16h-3C0.672,16,0,16.672,0,17.5    S0.672,19,1.5,19h3C5.328,19,6,18.328,6,17.5z M7.5,26c-0.414,0-0.789,0.168-1.061,0.439l-2,2C4.168,28.711,4,29.086,4,29.5    C4,30.328,4.671,31,5.5,31c0.414,0,0.789-0.168,1.06-0.44l2-2C8.832,28.289,9,27.914,9,27.5C9,26.672,8.329,26,7.5,26z M17.5,6    C18.329,6,19,5.328,19,4.5v-3C19,0.672,18.329,0,17.5,0S16,0.672,16,1.5v3C16,5.328,16.671,6,17.5,6z M27.5,9    c0.414,0,0.789-0.168,1.06-0.439l2-2C30.832,6.289,31,5.914,31,5.5C31,4.672,30.329,4,29.5,4c-0.414,0-0.789,0.168-1.061,0.44    l-2,2C26.168,6.711,26,7.086,26,7.5C26,8.328,26.671,9,27.5,9z M6.439,8.561C6.711,8.832,7.086,9,7.5,9C8.328,9,9,8.328,9,7.5    c0-0.414-0.168-0.789-0.439-1.061l-2-2C6.289,4.168,5.914,4,5.5,4C4.672,4,4,4.672,4,5.5c0,0.414,0.168,0.789,0.439,1.06    L6.439,8.561z M33.5,16h-3c-0.828,0-1.5,0.672-1.5,1.5s0.672,1.5,1.5,1.5h3c0.828,0,1.5-0.672,1.5-1.5S34.328,16,33.5,16z     M28.561,26.439C28.289,26.168,27.914,26,27.5,26c-0.828,0-1.5,0.672-1.5,1.5c0,0.414,0.168,0.789,0.439,1.06l2,2    C28.711,30.832,29.086,31,29.5,31c0.828,0,1.5-0.672,1.5-1.5c0-0.414-0.168-0.789-0.439-1.061L28.561,26.439z M17.5,29    c-0.829,0-1.5,0.672-1.5,1.5v3c0,0.828,0.671,1.5,1.5,1.5s1.5-0.672,1.5-1.5v-3C19,29.672,18.329,29,17.5,29z M17.5,7    C11.71,7,7,11.71,7,17.5S11.71,28,17.5,28S28,23.29,28,17.5S23.29,7,17.5,7z M17.5,25c-4.136,0-7.5-3.364-7.5-7.5    c0-4.136,3.364-7.5,7.5-7.5c4.136,0,7.5,3.364,7.5,7.5C25,21.636,21.636,25,17.5,25z"></path></svg><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" class="nightIcon" x="0px" y="0px" viewBox="0 0 100 100" style="enable-background:new 0 0 100 100" xml:space="preserve" aria-label="亮色模式"><title>亮色模式</title><path d="M96.76,66.458c-0.853-0.852-2.15-1.064-3.23-0.534c-6.063,2.991-12.858,4.571-19.655,4.571  C62.022,70.495,50.88,65.88,42.5,57.5C29.043,44.043,25.658,23.536,34.076,6.47c0.532-1.08,0.318-2.379-0.534-3.23  c-0.851-0.852-2.15-1.064-3.23-0.534c-4.918,2.427-9.375,5.619-13.246,9.491c-9.447,9.447-14.65,22.008-14.65,35.369  c0,13.36,5.203,25.921,14.65,35.368s22.008,14.65,35.368,14.65c13.361,0,25.921-5.203,35.369-14.65  c3.872-3.871,7.064-8.328,9.491-13.246C97.826,68.608,97.611,67.309,96.76,66.458z"></path></svg></button></div><div style="flex-grow: 0; flex-shrink: 1; flex-basis: auto; order: 0; align-self: center; justify-self: center;"><button class="readermode"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" class="readerIcon" fill="currentColor" stroke="currentColor" stroke-width="0.2" stroke-linecap="round" stroke-linejoin="round" width="64px" height="64px" viewBox="0 0 24 24" aria-label="阅读模式"><title>阅读模式</title><g transform="translate(-1.8, -1.8) scale(1.15, 1.2)"><path d="M8.9891247,2.5 C10.1384702,2.5 11.2209868,2.96705384 12.0049645,3.76669482 C12.7883914,2.96705384 13.8709081,2.5 15.0202536,2.5 L18.7549359,2.5 C19.1691495,2.5 19.5049359,2.83578644 19.5049359,3.25 L19.5046891,4.004 L21.2546891,4.00457396 C21.6343849,4.00457396 21.9481801,4.28672784 21.9978425,4.6528034 L22.0046891,4.75457396 L22.0046891,20.25 C22.0046891,20.6296958 21.7225353,20.943491 21.3564597,20.9931534 L21.2546891,21 L2.75468914,21 C2.37499337,21 2.06119817,20.7178461 2.01153575,20.3517706 L2.00468914,20.25 L2.00468914,4.75457396 C2.00468914,4.37487819 2.28684302,4.061083 2.65291858,4.01142057 L2.75468914,4.00457396 L4.50368914,4.004 L4.50444233,3.25 C4.50444233,2.87030423 4.78659621,2.55650904 5.15267177,2.50684662 L5.25444233,2.5 L8.9891247,2.5 Z M4.50368914,5.504 L3.50468914,5.504 L3.50468914,19.5 L10.9478955,19.4998273 C10.4513189,18.9207296 9.73864328,18.5588115 8.96709342,18.5065584 L8.77307039,18.5 L5.25444233,18.5 C4.87474657,18.5 4.56095137,18.2178461 4.51128895,17.8517706 L4.50444233,17.75 L4.50368914,5.504 Z M19.5049359,17.75 C19.5049359,18.1642136 19.1691495,18.5 18.7549359,18.5 L15.2363079,18.5 C14.3910149,18.5 13.5994408,18.8724714 13.0614828,19.4998273 L20.5046891,19.5 L20.5046891,5.504 L19.5046891,5.504 L19.5049359,17.75 Z M18.0059359,3.999 L15.0202536,4 L14.8259077,4.00692283 C13.9889509,4.06666544 13.2254227,4.50975805 12.7549359,5.212 L12.7549359,17.777 L12.7782651,17.7601316 C13.4923805,17.2719483 14.3447024,17 15.2363079,17 L18.0059359,16.999 L18.0056891,4.798 L18.0033792,4.75457396 L18.0056891,4.71 L18.0059359,3.999 Z M8.9891247,4 L6.00368914,3.999 L6.00599909,4.75457396 L6.00599909,4.75457396 L6.00368914,4.783 L6.00368914,16.999 L8.77307039,17 C9.57551536,17 10.3461406,17.2202781 11.0128313,17.6202194 L11.2536891,17.776 L11.2536891,5.211 C10.8200889,4.56369974 10.1361548,4.13636104 9.37521067,4.02745763 L9.18347055,4.00692283 L8.9891247,4 Z"></path></g></svg></button></div></div><div class="explorer" data-behavior="link" data-collapsed="collapsed" data-savestate="true" data-data-fns="{&quot;order&quot;:[&quot;filter&quot;,&quot;map&quot;,&quot;sort&quot;],&quot;sortFn&quot;:&quot;(a,b)=>!a.isFolder&amp;&amp;!b.isFolder||a.isFolder&amp;&amp;b.isFolder?a.displayName.localeCompare(b.displayName,void 0,{numeric:!0,sensitivity:\&quot;base\&quot;}):!a.isFolder&amp;&amp;b.isFolder?1:-1&quot;,&quot;filterFn&quot;:&quot;node=>node.slugSegment!==\&quot;tags\&quot;&quot;,&quot;mapFn&quot;:&quot;node=>node&quot;}"><button type="button" class="explorer-toggle mobile-explorer hide-until-loaded" data-mobile="true" aria-controls="explorer-22"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide-menu"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg></button><button type="button" class="title-button explorer-toggle desktop-explorer" data-mobile="false" aria-expanded="true"><h2>探索</h2><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="5 8 14 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="fold"><polyline points="6 9 12 15 18 9"></polyline></svg></button><div id="explorer-22" class="explorer-content" aria-expanded="false" role="group"><ul class="explorer-ul overflow" id="list-0"><li class="overflow-end"></li></ul></div><template id="template-file"><li><a href="#"></a></li></template><template id="template-folder"><li><div class="folder-container"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="5 8 14 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="folder-icon"><polyline points="6 9 12 15 18 9"></polyline></svg><div><button class="folder-button"><span class="folder-title"></span></button></div></div><div class="folder-outer"><ul class="content"></ul></div></li></template></div></div><div class="center"><div class="page-header"><div class="popover-hint"><nav class="breadcrumb-container" aria-label="breadcrumbs"><div class="breadcrumb-element"><a href="../">Home</a><p> ❯ </p></div><div class="breadcrumb-element"><a href="../x86_64/">x86_64</a><p> ❯ </p></div><div class="breadcrumb-element"><a href>BIOS硬件识别与信息获取原理</a></div></nav><h1 class="article-title">BIOS硬件识别与信息获取原理</h1><p show-comma="true" class="content-meta"><time datetime="2026-06-08T11:36:47.617Z">2026年6月08日</time><span>63分钟阅读</span></p></div></div><article class="popover-hint"><h1 id="bios-硬件识别与信息获取原理">BIOS 硬件识别与信息获取原理<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#bios-硬件识别与信息获取原理" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h1>
+<h2 id="1-bios-是什么">1. BIOS 是什么<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#1-bios-是什么" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<p>BIOS（Basic Input/Output System）是固化在主板 SPI FLASH 芯片上的一层<strong>固件</strong>，承载于一小片 8 脚 SOIC 封装的 NOR Flash（典型容量 16–32MB）。CPU 上电复位后执行的第一条指令就落在这片 Flash 映射到的物理地址上。其核心职责是：</p>
+<ol>
+<li><strong>探测并初始化硬件</strong> — 主板上的所有设备，从 CPU 自身到每一个插槽</li>
+<li><strong>构建系统硬件信息表</strong> — 为操作系统提供完整的硬件拓扑和资源分配</li>
+<li><strong>加载操作系统</strong> — 从存储设备读取引导程序并移交控制权</li>
+</ol>
+<hr/>
+<h2 id="2-bios-探测的核心理念没有上帝视角">2. BIOS 探测的核心理念：没有”上帝视角”<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#2-bios-探测的核心理念没有上帝视角" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<p>BIOS 本身也是一段程序，它没有”预先知道接了哪些硬件”的魔法。它必须通过一组<strong>标准协议</strong>和<strong>已知端口地址</strong>来主动探测。核心手段可以分为以下几类：</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="table-container"><table><thead><tr><th>探测手段</th><th>适用对象</th><th>原理</th></tr></thead><tbody><tr><td>固定地址 I/O 寄存器</td><td>芯片组、PIC、PIT、RTC、KBC</td><td>架构规范锁死了端口号，直接读</td></tr><tr><td>CPU 内置指令</td><td>CPU 自身</td><td>CPUID / RDMSR / RDPMC</td></tr><tr><td>总线协议读寄存器</td><td>PCI/PCIe、SMBus、LPC</td><td>按协议发送地址帧，看设备是否应答</td></tr><tr><td>命令/响应协议</td><td>SATA、NVMe、USB</td><td>发送标准命令，解析返回的数据结构</td></tr><tr><td>内存扫描</td><td>ACPI/SMBIOS 入口</td><td>在约定地址范围搜索魔法数字签名</td></tr><tr><td>探测写回</td><td>BAR 大小探测</td><td>写全 1，读回看哪些位被硬件硬编码为 0</td></tr></tbody></table></div>
+<p>BIOS 没有 USB 枚举的”上帝能力”去直接看到 USB 设备——它先要通过 PCI 枚举找到 xHCI 控制器，再通过 xHCI 寄存器操作端口，最后才能发现插了什么 USB 设备。每一层都是根据上一层的发现结果递进探测的。</p>
+<hr/>
+<h2 id="3-bios-整体启动流程">3. BIOS 整体启动流程<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#3-bios-整体启动流程" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<pre><code>CPU 上电复位 (第一条指令 @ 0xFFFFFFF0, 执行 BIOS ROM 中的代码)
+  │
+  ├── 阶段 0: 早期复位向量
+  │     ├── BSP/AP 识别 (通过 LAPIC ID 判断谁初始化)
+  │     ├── 清 EFLAGS, 关 NMI, 关 SMIs
+  │     └── FAR JMP → BIOS 真正入口 (0xF000:0xE05B 附近)
+  │
+  ├── 阶段 1: 芯片组早期初始化
+  │     ├── 探测 Host Bridge (PCI 0:0:0) → 确定芯片组型号
+  │     ├── 探测 LPC Bridge (PCI 0:31:0) → 确定南桥型号
+  │     ├── 配置 CPU 到 DRAM 的 System Agent (IMC)
+  │     └── Cache-as-RAM (CAR) 设置 (无 DRAM 时的运行环境)
+  │
+  ├── 阶段 2: 内存初始化 ★
+  │     ├── SMBus 探测 SPD (每个 DIMM 插槽)
+  │     ├── 内存控制器时序训练 (Memory Training)
+  │     └── 启用 DRAM → 至此 C 代码可运行
+  │
+  ├── 阶段 3: 总线枚举
+  │     ├── PCI/PCIe 总线枚举 (深度优先遍历)
+  │     ├── LPC 桥下 ISA/Serial/Super I/O 设备
+  │     └── BAR 空间分配 &amp; IRQ 路由
+  │
+  ├── 阶段 4: 外设初始化
+  │     ├── USB 控制器 + 端口枚举
+  │     ├── SATA/NVMe 存储控制器 + 设备信息
+  │     ├── 键盘/VGA/串口 控制台
+  │     └── 网络 PXE 启动 (可选)
+  │
+  ├── 阶段 5: 构建信息表
+  │     ├── E820 内存映射
+  │     ├── ACPI (DSDT/SSDT/MADT/MCFG/SRAT/DMAR...)
+  │     └── SMBIOS (Type 0/1/2/4/7/17...)
+  │
+  ├── 阶段 6: 启动设备选择
+  │     ├── 按 BBS (BIOS Boot Specification) 顺序尝试
+  │     ├── 读 LBA 0 → 验证 0x55AA
+  │     └── 加载到 0x7C00 并 JMP
+  │
+  └── 阶段 7: 移交控制权
+</code></pre>
+<hr/>
+<h2 id="4-芯片组探测--平台身份的起点">4. 芯片组探测 — 平台身份的起点<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#4-芯片组探测--平台身份的起点" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<p>在探测任何外部设备之前，BIOS 必须先知道”自己在什么平台上运行”。芯片组型号决定了后续所有寄存器的基址、初始化顺序和参数表。这一步走错了，整个启动过程全部报废。</p>
+<h3 id="41-物理拓扑cpu-与-pch-的互联">4.1 物理拓扑：CPU 与 PCH 的互联<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#41-物理拓扑cpu-与-pch-的互联" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>现代 Intel x86 平台的物理结构如下——CPU 是 SoC 化封装，PCH 是独立的外部芯片，二者通过 DMI/OPI 私有总线互联：</p>
+<pre><code> ┌─────────────────────────────┐
+ │          CPU 封装 (SoC)                                                                  │
+ │  ┌─────────┐  ┌──────────────┐ │
+ │  │  Cores                     │  │ System Agent                          │ │
+ │  │ (IA32)                      │  │  ├─ PCIe Root                       │ │
+ │  │                                │  │  ├─ IMC (DDR)                       │ │
+ │  │                                │  │  └─ Display                            │ │
+ │  └────┬────┘  └─────┬────────┘ │
+ │                    │                                         │                               │
+ │                    └──────┬─────┘                              │
+ │                                             │ DMI / OPI Link                           │
+ └────────────┼───────────────┘
+                                          │  ×4 或 ×8 PCIe Lane
+                                   │  (≈ PCIe Gen3, 每条 8GT/s)
+                 ▼
+ ┌─────────────────────────────┐
+ │          PCH (Platform                                                                      │
+ │       Controller Hub)                                                                       │
+ │  ┌──────────────────────────┐ │
+ │  │  DMI Interface                                                                    │ │
+ │  │  ├─ PCIe Root Ports (x24+)                                              │ │
+ │  │  ├─ SATA Controller                                                         │ │
+ │  │  ├─ USB xHCI                                                                  │ │
+ │  │  ├─ GbE MAC                                                                  │ │
+ │  │  ├─ HDA / SPI / I²C                                                         │ │
+ │  │  ├─ GPIO Communities                                                    │ │
+ │  │  ├─ LPC / eSPI Bridge                                                     │ │
+ │  │  ├─ ME / CSME (Management)                                        │ │
+ │  │  └─ RTC / HPET / 8259                                                   │ │
+ │  └──────────────────────────┘ │
+ └─────────────────────────────┘
+</code></pre>
+<p><strong>DMI</strong>（Direct Media Interface）是 Intel CPU 与 PCH 之间的私有总线链路，走的是 PCIe 电气层协议但使用专用的链路管理。DMI 3.0/4.0 等效于 PCIe 3.0 ×4 或 ×8。</p>
+<p><strong>OPI</strong>（On-Package Interconnect）是 DMI 的升级版，物理层相同，但封装内互连延迟更低。</p>
+<p>AMD 等效的互连是 <strong>Infinity Fabric / GMI</strong>，连接 CPU CCD（Core Complex Die）和 IOD（I/O Die，集成了对等的”南桥”功能）。</p>
+<h3 id="42-芯片组架构演变">4.2 芯片组架构演变<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#42-芯片组架构演变" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="table-container"><table><thead><tr><th>年代</th><th>架构</th><th>CPU 集成</th><th>南桥</th><th>连接总线</th></tr></thead><tbody><tr><td>~2008 前</td><td>传统 NB/SB</td><td>只有 Core</td><td>独立的 MCH (北桥) + ICH (南桥)</td><td>FSB + DMI</td></tr><tr><td>~2011 Sandy Bridge</td><td>SA/PCH</td><td>IMC + PCIe Root + IGP</td><td>PCH (单芯片南桥)</td><td>DMI 2.0</td></tr><tr><td>~2015 Skylake</td><td>单 PCH</td><td>SA 增加了更多 PCIe Lanes</td><td>PCH (200 系以后)</td><td>DMI 3.0</td></tr><tr><td>~2021 Alder Lake</td><td>SoC 化</td><td>全部 Core + SA + 部分 I/O</td><td>PCH (600 系) 可无 PCH 运行</td><td>DMI 4.0 ×8</td></tr><tr><td>AMD (2017+)</td><td>Chiplet</td><td>CCD (核) + IOD (IO+IMC)</td><td>可无南桥直接运行</td><td>Infinity Fabric</td></tr></tbody></table></div>
+<p>对 BIOS 而言，探测到的 Device ID 不仅决定寄存器基址，也决定了整个平台的能力集合（如支持的 PCIe 代次、DDR 类型、DMI 链路速度、USB 端口数等）。</p>
+<h3 id="43-前置条件cache-as-ram--没有内存时如何读-pci-配置空间">4.3 前置条件：Cache-as-RAM — 没有内存时如何读 PCI 配置空间<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#43-前置条件cache-as-ram--没有内存时如何读-pci-配置空间" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>BIOS 探测芯片组的第一个矛盾是：<strong>芯片组的寄存器在 PCI 配置空间/MMIO 空间，但 MMIO 的读写需要 DRAM 做地址路由，而 DRAM 此时还没有初始化。</strong></p>
+<p>解决方案是 <strong>Cache-as-RAM (CAR)</strong>：BIOS 在上电后的最初阶段，将 CPU 的 L1/L2 Cache 配置为”不分驱逐写入 RAM 的伪内存”模式（通过设置 MTRR 将一段物理地址标记为 Write-Back 并填满 Cache），用 L1/L2 缓存当临时的栈空间。CAR 模式下，IN/OUT 指令访问 I/O 端口（如 0xCF8/0xCFC）完全不需要 DRAM——这些 I/O 端口事务是直接路由到芯片组的。</p>
+<pre><code>BIOS 顺序:
+1. CPU 上电, 执行 SPI ROM 中的复位向量
+2. 设置 MTRR, 将一段物理地址范围标记为 Cache-as-RAM
+3. 直到这一步, 栈建立在 CPU L1/L2 缓存上
+4. IN 0xCF8 → 设置 PCI 地址, IN 0xCFC → 读 Host Bridge Vendor ID
+   ▲ 这一步不需要 DRAM!!
+5. 确定芯片组型号后, 才开始 Memory Training (需要 DRAM 可用)
+6. 训练完成后 DRAM 可用 → 切换到正常栈
+</code></pre>
+<h3 id="44-host-bridgebdf-000完整寄存器映射">4.4 Host Bridge（BDF 0:0:0）完整寄存器映射<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#44-host-bridgebdf-000完整寄存器映射" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>Host Bridge 在 Intel 架构中对应 System Agent（SA）的 PCI 代理，固定在 <strong>Bus 0, Device 0, Function 0</strong>。BIOS 通过 <code>0xCF8/0xCFC</code> 直接读取。</p>
+<p><strong>Host Bridge 寄存器全景</strong>：</p>
+<pre><code>偏移      寄存器                    说明
+──────────────────────────────────────────────────
+0x00-01   VID                       0x8086 (Intel) / 0x1022 (AMD)
+0x02-03   DID                       芯片组型号
+0x04-05   PCICMD                    Command: Bus Master/Memory Space 使能
+0x06-07   PCISTS                    Status: Capability List 存在
+0x08      RID                       Revision ID (芯片步进)
+0x09-0B   Class Code                0x060000 (Host Bridge)
+0x2C-2D   SVID                      子系统 Vendor ID
+0x2E-2F   SID                       子系统 ID
+0x34      CAP_PTR                   指向第一个扩展能力 (通常 0x40 或 0xE0)
+0x40-43   EPBAR                     Extended Power Mgmt BAR
+                                      指向 SA 的 Power/Clock 控制寄存器
+0x48-4B   MCHBAR                    Memory Controller Hub BAR ★
+                                      指向 IMC 的完整寄存器集:
+                                      - 内存时序寄存器
+                                      - 内存训练控制/状态
+                                      - 内存地址解码/Memory Map
+                                      - ECC 控制
+0x50-53   GGC                       Graphics 配置
+0x54      DEVEN                     设备使能 (bitfield: 各 Root Port/IGD)
+0x60-63   DMIBAR                    DMI BAR ★
+                                      指向 DMI/OPI 链路寄存器:
+                                      - 链路状态 (Link Cap/Control/Status)
+                                      - VC (Virtual Channel) 配置
+0x68-6B   X2APIC_OPT                x2APIC 选项
+0x70-73   TOLUD                     Top of Low Usable DRAM (用于 PCI 空洞大小)
+0x80-83   GBSM                      图形基址 (Graphics Base of Stolen Mem)
+0x84-87   BGSM                      VT-d 基址 (Base of Gfx Stolen Mem)
+0x88-8B   TSEGMB                    TSEG 内存基址 (SMM 保护区域)
+0xBC-BF   PAVP_BASE                 保护 AV 路径基址
+0xE0-EF   CAPID0_A / CAPID0_B       SoC 能力寄存器 (供应商特定)
+</code></pre>
+<p><strong>MCHBAR 内部空间示例</strong>：</p>
+<pre><code>MCHBAR + 偏移:
+  0x4000: 内存通道 0 地址解码寄存器
+  0x4400: 内存通道 1 地址解码寄存器
+  0x4800: 内存时序 (tCL/tRCD/tRP/tRAS/tRFC 等)
+  0x4C00: 内存训练控制/状态寄存器组
+  0x5000: MAD (Memory Address Decoder) 通道间交错
+  0x5800: DDR PHY 控制和状态
+  0x5C00: 内存热管理寄存器
+</code></pre>
+<p><strong>DMIBAR 内部空间示例</strong>：</p>
+<pre><code>DMIBAR + 偏移:
+  0x00: DMI Link Capability (最大速度、宽度)
+  0x04: DMI Link Control (目标速度、ASPM)
+  0x08: DMI Link Status (协商速度、宽带)
+  0x20: DMI VC0 资源控制
+  0x24: DMI VC0 资源状态
+</code></pre>
+<p><strong>BIOS 探测 Host Bridge 的完整事件序列</strong>：</p>
+<pre><code>1. 读 BDF 0:0:0, Offset 0x00 → Vendor ID
+   ├─ 读到的值:
+   │   0xFFFF → Host Bridge 未就绪 (极早期 PCH 还在复位), 等待后重试
+   │   0x8086 → Intel 平台
+   │   0x1022 → AMD 平台
+   │   其他   → VIA/SiS/NVIDIA 等旧平台 (BIOS 可能不支持, 报错)
+
+2. 读 Offset 0x02 → Device ID
+   → 遍历 BIOS 内置的 device_id_table:
+      struct {
+          u16 device_id;
+          u8  platform_family;   // 1=Desktop, 2=Mobile, 3=Server
+          u8  dmi_version;        // 1/2/3/4
+          u8  max_ddr_speed;      // 0=DDR4-3200, 1=DDR5-4800...
+          u8  pcie_gen;           // 3/4/5
+          u8  usb_ports;          // 总 USB 端口数
+          u16 sata_ports;         // 总 SATA 端口数
+          u32 mchbar_base;         // MCHBAR 默认基址
+          u32 dmibar_base;         // DMIBAR 默认基址
+          u32 epbar_base;          // EPBAR 默认基址
+          ...
+      } platforms[];
+
+   → 匹配成功 → 设置全局 platform 指针, 载入全部基址信息
+
+3. 读 Offset 0x08 → Revision ID (步进)
+   → 用于查询 Intel/AMD 的 Specification Update 表
+   → 决定是否需要应用特定 Stepping 的 Workaround
+
+4. 读 Offset 0x0E → Header Type
+   → bit7=0 (单功能) 或 bit7=1 (多功能 Host Bridge)
+   → Header Type &amp; 0x7F == 0 → 标准 PCI Header
+
+5. PCI 扩展能力链表遍历:
+   读 Offset 0x34 → CAP_PTR (首次能力偏移)
+   while cap_ptr != 0:
+       CapID = read_config(BDF, cap_ptr)
+       if CapID == 0x09:   记录 PCI Bridge Subsystem Vendor ID
+       if CapID == 0x10:   记录 PCI Express 根复合体能力
+       if CapID == 0x14:   记录 Advanced Features (ACS)
+       cap_ptr = read_config(BDF, cap_ptr+1)
+</code></pre>
+<p><strong>关键：Host Bridge 的 Capability 还描述了有多少个 Root Port</strong>——BIOS 在后续 PCI 枚举中需要知道从 Bus 0 的哪些 Device/Function 开始扫描。Intel 平台通过 Host Bridge 的 DEVEN 寄存器（偏移 0x54）和 CAPID0 寄存器（偏移 0xE0）读取 Root Port 的数量和 BDF 分配。</p>
+<h3 id="45-dmi--opi-链路初探">4.5 DMI / OPI 链路初探<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#45-dmi--opi-链路初探" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>CPU 与 PCH 之间的 DMI 链路在 BIOS 探测 Host Bridge 时同步初始化。链路的<strong>电气训练</strong>由芯片组硬件自动完成（类似 PCIe Link Training），但 BIOS 需要读取训练结果来确认连接速度。</p>
+<pre><code>DMI 链路初始化流程:
+1. Hardware Training (自动):
+   - DMI TX/RX 通道自动建立 (接收器检测、速率协商、通道翻转等)
+   - 完成后, DMIBAR 偏移 0x08 (Link Status) 生效
+
+2. BIOS 读取 DMIBAR[Link Status]:
+   - bit[19:16] = 协商的 PCIe 速率 (1=2.5G, 2=5G, 3=8G, 4=16G GT/s)
+   - bit[9:4]   = 协商的通道宽度 (×1/×2/×4/×8)
+
+3. 判断:
+   if 协商速率 &lt; 最大能力: 降档运行, 发出 POST Warning
+   if 协商速率 >= 8 GT/s: DMI 3.0+ 模式, OK
+   if 协商速率 &lt; 5 GT/s: 非常旧平台, 可能不支持
+
+4. 读取 DMIBAR 偏移 0x0C (RCLK Status) 验证 DMA 时钟是否正确
+</code></pre>
+<h3 id="46-pchlpc-bridge--isa-bridge--南桥的-pci-代理">4.6 PCH（LPC Bridge / ISA Bridge） — 南桥的 PCI 代理<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#46-pchlpc-bridge--isa-bridge--南桥的-pci-代理" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p><strong>LPC Bridge</strong> 位于 <strong>BDF 0:31:0</strong>（Intel 平台），Class Code 0x060100（ISA Bridge）。它是 PCH 在 PCI Bus 0 上最重要的设备，内部包含整个 PCH 的核心控制寄存器。</p>
+<p><strong>但 PCH 不止 BDF 0:31:0</strong>。PCH 内部集成了数十个 PCI 设备，它们在 Bus 0 上按规范的 BDF 分布。BIOS 需要通过 Chipset Datasheet 中的固定 BDF 表来访问每一个内部设备。以下是以 <strong>Intel 600 系 PCH (Alder Lake/Raptor Lake)</strong> 为典型的完整 BDF 映射：</p>
+<pre><code>PCH 内部 PCI 设备映射表 (Bus 0, Device 0xFF = 未使用):
+  ┌──────┬──────┬──────────────────────────┐
+  │ Dev              │ Func             │  设备名                                                                              │
+  ├──────┼──────┼──────────────────────────┤
+  │ 0x00 │  0   │  Host Bridge (SA, 不在 PCH 内)                                                                    │
+  │ 0x02 │  0   │  集成显卡 (IGD)                                                                                           │
+  │ 0x04 │  0   │  SA Thermal / Power Management                                                               │
+  │ 0x05 │  0   │  Image Processing Unit (IPU)                                                                       │
+  │ 0x06 │  0   │  PCIe Root Port #0                                                                                      │
+  │ 0x07 │  0–7 │  PCIe Root Port #1–#8 (PCH 侧)                                                                │
+  │ 0x08 │  0   │  GNA (Gaussian Neural Accelerator)                                                            │
+  │ 0x0A │  0   │  PCIe Root Port #9                                                                                      │
+  │ 0x0D │  0   │  USB xHCI #0                                                                                             │
+  │ 0x0E │  0   │  GbE Controller (集成 MAC)                                                                         │
+  │ 0x14 │  0   │  USB xHCI #1                                                                                             │
+  │ 0x14 │  2   │  Shared SRAM                                                                                           │
+  │ 0x14 │  3   │  CNVi (WiFi/BT)                                                                                          │
+  │ 0x15 │  0   │  I²C #0                                                                                                        │
+  │ 0x15 │  4   │  I²C #1                                                                                                       │
+  │ 0x16 │  0   │  MEI #1 (HECI)                                                                                            │
+  │ 0x16 │  4   │  MEI #2                                                                                                      │
+  │ 0x17 │  0   │  SATA AHCI (RST)                                                                                       │
+  │ 0x1A │  0   │  UART #0                                                                                                   │
+  │ 0x1C │  0–7 │  PCH 内部 PCIe Root Ports (#1–#8)                                                         │
+  │ 0x1E │  0   │  UART #1                                                                                                   │
+  │ 0x1F │  0   │  LPC Bridge (ISA) ★                                                                                   │
+  │ 0x1F │  1–2 │  P2SB (PCH 私有配置空间桥)                                                                   │
+  │ 0x1F │  3   │  HD Audio                                                                                                  │
+  │ 0x1F │  4   │  SMBus 主机控制器                                                                                   │
+  │ 0x1F │  5   │  SPI Flash Controller                                                                                  │
+  │ 0x1F │  6   │  GbE 扩展 (若 Dev 0x0E 未集成)                                                                 │
+  │ 0x1F │  7   │  Trace Hub                                                                                                 │
+  │ 0x20 │  0   │  xHCI #2 (USB3 附加)                                                                                │
+  │ 0x22 │  0   │  HECI #3                                                                                                    │
+  │ 0x23 │  0   │  SATA AHCI #2                                                                                           │
+  │ 0x27 │  0   │  SPI #2 (GSPI)                                                                                            │
+  └───┴──┴────────────────────────────────┘
+</code></pre>
+<p>BIOS 并不需要”探测”这些设备——它们在 PCH 内部固定存在，BDF 由芯片组 Datasheet 硬编码。但 BIOS 需要通过读 Vendor ID 验证设备确实存在，并读取 Device ID 来获得精确的 PCH 版本。</p>
+<p><strong>LPC Bridge（BDF 0:31:0）的完整寄存器映射</strong>：</p>
+<pre><code>偏移      寄存器                    说明
+───────────────────────────────────────────────
+0x00-01   VID                       0x8086
+0x02-03   DID                       确定 PCH 型号
+0x08      RID                       芯片步进
+0x09-0B   Class Code                0x060100 (ISA Bridge)
+0x0E      Header Type               0x80 (多功能)
+2C-2D     SVID                      0x8086 或 OEM
+───────────────────────────────────────────────
+0x40-43   PMBASE                    ACPI Power Mgmt I/O 基址 (固定 0x1800)
+                                       偏移 0x00: PM1_STS / PM1_EN
+                                       偏移 0x04: PM1_CNT (Sleep 命令)
+                                       偏移 0x08: PM2_CNT
+                                       偏移 0x0C: PM_TMR (24位 ACPI 定时器)
+                                       偏移 0x20: GPE0_STS / GPE0_EN
+0x44-45   ACPI_CNTL                 ACPI 控制:
+                                       bit0 = SCI IRQ 选择
+                                       bit1 = ACPI Enable
+0x48-4B   GPIOBASE                  GPIO 控制器 I/O 基址
+0x50-53   GC                        通用控制 (包含 BIOS 锁定)
+0x54-57   GPIOBASE+2                GPIO 社区 2
+0x60-63   RCBA                      Root Complex Base Address (MMIO) ★
+0x64-67   PMBASE+4                  Alternate PM Base
+0x68      PIRQ[A-H]_ROUT            8-bit PIRQ 路由控制 (对应 8 个 INTx)
+0x80-83   LPC_GENERIC_DEC_RANGE1    LPC 通用解码范围 1 (用于 TPM/EC)
+0x84-87   LPC_GENERIC_DEC_RANGE2    LPC 通用解码范围 2
+0xA0-0A   BIOS_CNTL                 BIOS 控制:
+                                       bit0 = BIOS Lock Enable (BIOSWE)
+                                       bit1 = BIOS Lock (一旦设置不可取消到重启)
+                                       bit5 = SMM BIOS Write Protect (SMM_BWP)
+0xAC-0AF  TCOBASE                   TCO 看门狗 I/O 基址
+0xB0-0B3  Power Mgmt 配置
+0xD0-0D7  中断路由寄存器
+0xDC-0DF  RCBA+Power Mgmt Config    PWRMBASE
+</code></pre>
+<p><strong>RCBA（Root Complex Base Address）空间</strong>是 PCH 另一套重要的寄存器集，通过 MMIO 方式映射，内部包含：</p>
+<pre><code>RCBA + 偏移:
+  0x0000: RCBA 版本 ID
+  0x1000: PCH 芯片组配置寄存器
+  0x2000: HPET 配置
+  0x3000: GPIO 配置
+  0x3100: GPIO 路由
+  0x3400: LPC 桥配置 (COM/LPT/KBC 解码)
+  0x3418: LPC 通用解码范围 1
+  0x3500: Flash Protection Range 寄存器 (BIOS Range Write Protect)
+  0x3800: I/O 解码基址 (已废弃, 现在用 0x80-0x87 替代)
+</code></pre>
+<p><strong>BIOS 探测 LPC Bridge 的完整事件序列</strong>：</p>
+<pre><code>1. 读 BDF 0:31:0, Offset 0x00 → Vendor ID
+   ├─ 0xFFFF → PCH 不存在或未就绪 (ERROR!)
+   └─ 0x8086 → 继续
+
+2. 读 Offset 0x02 → Device ID (PCH 型号)
+   → 从 PCH ID 表获取:
+      - PCH 家族 (如 Z790/B760/H770/Q670)
+      - USB 端口数量和类型分布
+      - SATA 端口数量
+      - PCIe Lane 数量
+      - ME/CSME 固件版本范围
+
+3. 读 Offset 0x40 → PMBASE
+   → 验证 ACPI PM 寄存器可读写
+   → 读 PMBASE + 0x0C → PM_TMR (24 位 ACPI 定时器) 验证 ACPI 计时是否工作
+
+4. 读 Offset 0x60 → RCBA
+   → 通过 MMIO 地址访问 RCBA 空间
+   → 读 RCBA+0x0000 → 验证 RCBA 版本
+
+5. 读 Offset 0x80 → LPC_GENERIC_DEC_RANGE1
+   → 检查哪个范围被 BIOS 预解码给 EC/KBC
+   → 若需要, 重新编程
+
+6. 读 Offset 0xA0 → BIOS_CNTL
+   → bit1 == 1 → BIOS Locked! (只能通过硬重启解锁)
+   → bit5 == 1 → SMM 写保护已开启
+
+7. 遍历 Bus 0 上 PCH 固定 BDF 表:
+   for each (dev,func,pch_device_name) in pch_bdf_table:
+       vid = read_config(0, dev, func, 0x00)
+       if vid != 0xFFFF:
+           记录该设备存在
+           若 DID 与预期不同 → 记录为 Silicon 变体, 更新平台结构体
+       else:
+           若该设备在 Datasheet 中标为 &quot;必须存在&quot; → POST Error!
+           若标为 &quot;可选&quot; → 跳过
+</code></pre>
+<h3 id="47-pch-内部关键功能模块的探测">4.7 PCH 内部关键功能模块的探测<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#47-pch-内部关键功能模块的探测" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>确定了 PCH 型号后，BIOS 依次初始化 PCH 的各个内部模块。以下列出需要特别处理的关键设备：</p>
+<p><strong>SPI Flash Controller (BDF 0:31:5)</strong>：</p>
+<pre><code>这是 BIOS 访问自身存储的唯一通道。PCH 内 SPI 控制器直接连接到主板上的 SPI Flash 芯片。
+BIOS 在探测阶段不需要&quot;重新初始化&quot; SPI 控制器（因为 CPU 是通过 PCH SPI 直接从 Flash
+取指令的），但需要:
+
+1. 读 SPI BAR0 → 确定 SPI 寄存器 MMIO 基址
+2. 读 Flash Descriptor 区域 (Flash 的首个 4KB Sect):
+     - 签名 0xFF0A (Intel Flash Descriptor)
+     - Flash 布局 (BIOS/ME/GBE/Platform 数据区域的大小)
+     - Master Access 权限 (CPU/ME 对各区域的读写权限)
+3. 检查 Flash Descriptor 的 VSCC (Vendor Specific Component Capabilities)
+     → 确定 Flash 的 JEDEC ID 和指令集 (Write Enable/Erase/Write 所需命令序列)
+4. 设置 FREG (Flash Region) 寄存器, 保护 ME 区域防止 BIOS 误写
+5. 若发现整个 Flash 被加锁 → BIOS 无法写入自己 → 只能运行不更新微码
+</code></pre>
+<p><strong>MEI / HECI (BDF 0x16:0)</strong> — Intel Management Engine Interface：</p>
+<pre><code>ME 是 PCH 内一个独立的 ARC/X86 核心，运行完整的 Minix 或 ThreadX 操作系统。
+BIOS 需要:
+1. 读 BDF 0x16:0 的 BAR0 → MEI MMIO 基址
+2. 通过 MEI 协议 (HECI / MEI Bus) 发送 &quot;DRAM Init Done&quot; 消息
+3. ME 返回: 加密引擎状态、固件版本、PCH 的 Fuse 状态
+4. 向 ME 请求 End-of-POST 消息 → ME 知道引导过程到了哪步
+</code></pre>
+<p><strong>SMBus 控制器 (BDF 0:31:4)</strong>：</p>
+<pre><code>这在前文 SPD 读取时已经使用。BIOS 在此处:
+1. 读 BAR0 → SMBus I/O 基址
+2. 验证 Host Status 寄存器可读写
+3. 设置 SMBus 时钟频率 (通常 100kHz)
+</code></pre>
+<p><strong>GPIO Communities</strong>：</p>
+<pre><code>PCH GPIO 是平台最复杂的配置之一，每个引脚可独立配置为 GPIO/原生功能。
+BIOS 需要:
+1. 从 LPC Bridge 读 GPIOBASE → 得 GPIO 社区 0 的 I/O 基址
+2. 每个社区包含:
+     - GPIOCFG (配置寄存器): 功能选择 (GPIO/原生1/原生2/原生3)
+     - GPIOROUTE: IOxAPIC / SCI / SMI / NMI 路由选择
+     - GPIOTXSTATE: 输出值
+     - GPIORXSTATE: 输入值
+3. 遍历所有 GPIO 社区 (通常 4-12 个社区, 每个社区最多 32 个引脚)
+4. 根据平台配置表将关键引脚设置为正确模式:
+     - M.2 SATA/PCIE Select → 原生功能
+     - BIOS Recovery → GPIO 输入
+     - 主板 ID Strapping → GPIO 输入 (读主板版本)
+</code></pre>
+<h3 id="48-amd-平台差异">4.8 AMD 平台差异<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#48-amd-平台差异" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>AMD 平台在 Broadcom (2017+) 的 Zen 架构后采用了与 Intel 不同的物理结构，但 BIOS 访问的方式一致——都通过 PCI 配置空间读 Host Bridge (BDF 0:0:0) 来判断平台。</p>
+<pre><code>AMD 平台读 BDF 0:0:0:
+  Vendor 0x1022 → AMD
+  Device ID:
+    0x1450 → X370  (Zen 1)
+    0x1480 → X470  (Zen+)
+    0x14B5 → X570  (Zen 2/3 IOD)
+    0x14D8 → B650  (Zen 4)
+</code></pre>
+<p>AMD 没有传统 LPC Bridge（因不使用 Intel 的 PCH 而是自家 FCH/整合 IOD），但 BIOS 仍通过 PCI 枚举发现 FCH 内部的 SMBus、SATA、USB 等设备（BDF 地址集不同）。</p>
+<h3 id="49-探测完成后的全局数据">4.9 探测完成后的全局数据<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#49-探测完成后的全局数据" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>芯片组探测是所有后续步骤的前提。BIOS 在完成芯片组探测后，建立了一个<strong>全局平台状态结构体</strong>（类似 Linux 的 <code>struct cpuinfo_x86</code> 概念），其中包含：</p>
+<pre><code>struct platform_data {
+    u8  vendor;           // 0=Intel, 1=AMD
+    u16 host_device_id;   // Host Bridge Device ID
+    u16 pch_device_id;    // PCH Device ID
+    u8  dmi_version;      // 1-4
+    u8  pcie_max_gen;     // 3/4/5
+    u8  ddr_type;         // 0=DDR4, 1=DDR5
+    u8  imc_channels;     // 内存控制器通道数
+    u8  max_dimm_per_ch;  // 每通道最大 DIMM 数
+    u16 sata_ports;
+    u16 usb2_ports;
+    u16 usb3_ports;
+    u8  me_enabled;       // ME 是否启用
+    u8  has_tpm;          // TPM 存在?
+    u8  has_gbe;          // 集成 GbE?
+    u8  has_cnvi;         // CNVi WiFi?
+    u32 mchbar_base;
+    u32 dmibar_base;
+    u32 epbar_base;
+    u32 rcba_base;
+    u32 pmbase;
+    u32 gpiobase;
+    ...
+};
+
+// 后续全部代码都通过 platform_data 查询平台能力
+if (platform.pcie_max_gen >= 4) { set PCIe Gen4 speeds; }
+if (platform.ddr_type == DDR5)   { use DDR5 training sequence; }
+</code></pre>
+<hr/>
+<h2 id="5-cpu-自身识别">5. CPU 自身识别<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#5-cpu-自身识别" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<h3 id="51-cpuid--不依赖-pci-总线的自省">5.1 CPUID — 不依赖 PCI 总线的自省<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#51-cpuid--不依赖-pci-总线的自省" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p><code>CPUID</code> 指令是 CPU 内部的纯硬件指令——不需要外部总线、不需要内存。BIOS 唯一需要确认的只是”在执行 CPUID 之前我已经保证 CPU 处于稳定状态”。</p>
+<p><strong>CPUID 的硬件工作机制</strong>：</p>
+<p>CPU 微码内部维护了一组 Model-Specific 的值寄存器。当指令解码器遭遇 <code>CPUID</code> 时：</p>
+<ol>
+<li>读 EAX 作为输入 selector (leaf)</li>
+<li>读 ECX 作为子叶子号 (sub-leaf)</li>
+<li>硬件多路复用器根据 leaf/sub-leaf 从内部的 200+ 个只读 MSR 中选择返回数据</li>
+<li>结果写入 EAX/EBX/ECX/EDX</li>
+</ol>
+<p><strong>关键 CPUID 叶子号汇总</strong>：</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="table-container"><table><thead><tr><th>Leaf (EAX)</th><th>ECX</th><th>返回信息</th></tr></thead><tbody><tr><td>0x00</td><td>-</td><td>最大基础叶子号 + 厂商字符串 “GenuineIntel”/“AuthenticAMD”</td></tr><tr><td>0x01</td><td>-</td><td>Family/Model/Stepping (EAX), Feature Flags (ECX/EDX)</td></tr><tr><td>0x02</td><td>-</td><td>缓存和 TLB 描述符</td></tr><tr><td>0x04</td><td>0-N</td><td>L1/L2/L3 缓存拓扑：大小、组相联、缓存线大小、共享信息</td></tr><tr><td>0x06</td><td>-</td><td>温度传感器 / Turbo Boost / EIST</td></tr><tr><td>0x07</td><td>0</td><td>扩展特性标志 (AVX2/AVX-512/SMAP/CET/SGX)</td></tr><tr><td>0x0A</td><td>-</td><td>性能监控计数器 (PMC) 版本和数量</td></tr><tr><td>0x0B</td><td>0-N</td><td>拓扑枚举: SMT(1)/Core(2)/Package(3) 层级</td></tr><tr><td>0x0D</td><td>0-N</td><td>XSAVE/XRSTOR 状态区大小 (FPU/SSE/AVX/AMX)</td></tr><tr><td>0x15</td><td>-</td><td>TSC 晶振频率 / 核心频率比例</td></tr><tr><td>0x16</td><td>-</td><td>Processor Base Frequency (基准频率 MHz)</td></tr><tr><td>0x80000000</td><td>-</td><td>最大扩展叶子号</td></tr><tr><td>0x80000001</td><td>-</td><td>Long Mode / NX / SYSCALL / 1GB Pages 能力</td></tr><tr><td>0x80000002-04</td><td>-</td><td>Processor Name String (48 ASCII)</td></tr><tr><td>0x80000006</td><td>-</td><td>L2 缓存大小和 Line Size</td></tr><tr><td>0x80000008</td><td>-</td><td>物理地址位数 / 虚拟地址位数</td></tr></tbody></table></div>
+<h3 id="52-cpu-型号识别">5.2 CPU 型号识别<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#52-cpu-型号识别" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="asm" data-theme="github-light github-dark"><code data-language="asm" data-theme="github-light github-dark" style="display:grid;"><span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">mov</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> eax</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">1</span></span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">cpuid</span></span>
+<span data-line> </span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; EAX[3:0]   = Stepping</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; EAX[7:4]   = Model</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; EAX[11:8]  = Family</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; 完整的 Family 需要加上 EAX[27:20] (Extended Family)</span></span>
+<span data-line> </span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; 关键 Feature Flags:</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; ECX bit 0  = SSE3</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; ECX bit 5  = VMX (VT-x Intel)</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; ECX bit 9  = SSSE3</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; ECX bit 19 = SSE4.1</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; ECX bit 20 = SSE4.2</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; ECX bit 23 = POPCNT</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; ECX bit 25 = AES-NI</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; ECX bit 27 = OSXSAVE (XGETBV)</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; ECX bit 28 = AVX</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; ECX bit 30 = RDRAND</span></span>
+<span data-line> </span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; EDX bit 0  = FPU</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; EDX bit 4  = TSC</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; EDX bit 8  = CMPXCHG8B</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; EDX bit 11 = SEP (SYSENTER/SYSEXIT)</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; EDX bit 15 = CMOV</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; EDX bit 23 = MMX</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; EDX bit 25 = SSE</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; EDX bit 26 = SSE2</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; EDX bit 28 = HTT (超线程)</span></span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; EDX bit 29 = TM (温度监控)</span></span></code></pre></figure>
+<h3 id="53-cpu-拓扑探测">5.3 CPU 拓扑探测<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#53-cpu-拓扑探测" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>BIOS 通过 CPUID Leaf 0x0B 递归枚举 SMT→Core→Package 的层级关系：</p>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="c" data-theme="github-light github-dark"><code data-language="c" data-theme="github-light github-dark" style="display:grid;"><span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">uint32_t</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> smt_mask </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> 0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">, core_mask </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> 0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">, pkg_mask </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> 0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">;</span></span>
+<span data-line> </span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">for</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> (</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> level </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> 0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">; ; level</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">++</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">) {</span></span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">    struct</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> cpuid_regs r </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;"> cpuid_ecx</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">0x</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">0B</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">, level);</span></span>
+<span data-line> </span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">    uint8_t</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> level_type </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> (r.ecx </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">>></span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> 8</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">&amp;</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;"> 0x</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">FF</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">;</span></span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> (level_type </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">==</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> 0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">break</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">;</span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">  // 没有更多层级</span></span>
+<span data-line> </span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">    uint8_t</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> shift </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> r.eax </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">&amp;</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;"> 0x</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">1F</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">;</span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">     // APIC ID 右移位数</span></span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">    uint16_t</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> count </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> r.ebx </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">&amp;</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;"> 0x</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">FFFF</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">;</span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">  // 该层级逻辑处理器数</span></span>
+<span data-line> </span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">    switch</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> (level_type) {</span></span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">    case</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> 1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">:  smt_mask  </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;"> ~</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">((</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">1</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;"> &lt;&lt;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> shift) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">-</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> 1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">); </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">break</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">;</span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">  // SMT</span></span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">    case</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> 2</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">:  core_mask </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;"> ~</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">((</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">1</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;"> &lt;&lt;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> shift) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">-</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> 1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">); </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">break</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">;</span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">  // Core</span></span>
+<span data-line><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">    }</span></span>
+<span data-line><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">    pkg_mask </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;"> ~</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">((</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">1</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;"> &lt;&lt;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> shift) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">-</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> 1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">);</span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">                    // Package</span></span>
+<span data-line><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">}</span></span></code></pre></figure>
+<p><strong>APIC ID 分解</strong>：</p>
+<pre><code>APIC_ID (32 位):
+    [ pkg_id ] [ core_id ] [ smt_id ]
+     ←───────────→
+     其中 smt_id 的低 smt_shift 位有效
+     core_id = (APIC_ID &amp; ~smt_mask) >> smt_shift
+     pkg_id  = (APIC_ID &amp; ~core_mask) >> core_shift
+</code></pre>
+<h3 id="54-msr-寄存器--不在-cpuid-中的信息">5.4 MSR 寄存器 — 不在 CPUID 中的信息<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#54-msr-寄存器--不在-cpuid-中的信息" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>某些 CPU 信息只能通过 <code>RDMSR</code>（Read Model-Specific Register）获取：</p>
+<pre><code>MSR 0xCE (MSR_PLATFORM_INFO):
+    bits [15:8]  = 最大非 Turbo 倍频 (Max Non-Turbo Ratio)
+    bits [47:40] = 最大效率倍频 (Minimum Ratio)
+    bits [50:48] = 编程倍频限制
+
+MSR 0x1A0 (MSR_MISC_FEATURE_CONTROL):
+    控制 TCC/TDC/Thermal 状态
+
+IA32_FEATURE_CONTROL (MSR 0x3A):
+    bit 0 = 锁定位 (1=写入被锁, 只能硬重启解锁)
+    bit 1 = 允许 VMX 在 SMX 外
+    bit 2 = 允许 VMX 在 SMX 内
+
+MSR 0x198 (IA32_PERF_STATUS):
+    [15:0] = 当前 P-State 的倍频值
+
+MSR 0xE8 (IA32_MPERF) 和 0xE7 (IA32_APERF):
+    用于计算当前 CPU 负载比例 (aperf/mperf × base_freq)
+</code></pre>
+<hr/>
+<h2 id="6-内存探测smbus--spd--时序训练">6. 内存探测：SMBus + SPD + 时序训练<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#6-内存探测smbus--spd--时序训练" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<p>内存是 BIOS 初始化中最复杂的环节，因为它需要先完成<strong>电气层面的握手</strong>，才能开始读取数据。</p>
+<h3 id="61-ddr-内存架构简介">6.1 DDR 内存架构简介<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#61-ddr-内存架构简介" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>现代 x86 平台的内存控制器（IMC, Integrated Memory Controller）已经集成在 CPU 内部，每个内存通道连接 1–2 个 DIMM 插槽，每个 DIMM 上有多个 DRAM 芯片（Rank），它们共用地址/命令总线，每个芯片贡献 4/8/16 位数据线。</p>
+<pre><code>CPU 封装
+  ├── Core Complex (CCX)      → 计算核心
+  ├── System Agent (SA)       → PCIe 根复合体 + 显示输出
+  └── Integrated Memory Controller (IMC) → 2 个通道:
+        ├── Channel A → DIMM0, DIMM1
+        └── Channel B → DIMM0, DIMM1
+</code></pre>
+<h3 id="62-smbus-探测-spd">6.2 SMBus 探测 SPD<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#62-smbus-探测-spd" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>SPD 芯片焊在每个 DIMM 插槽旁，通过 <strong>SMBus</strong>（I²C 物理层）与 PCH/IMC 通信。BIOS 上电后通过 PCH 内的 SMBus 主机控制器逐个读取。</p>
+<p><strong>SMBus 主机控制器的寄存器基址</strong>由 PCH 内部硬件锁死为 <code>I/O 0xEFA0</code>（或通过 PCI BDF 0:31:4 的 BAR0 确定——不同平台可能不同，BIOS 根据阶段 4 中探测到的芯片组型号决定具体的端口号）。</p>
+<pre><code>SMBus 主机控制器 I/O 寄存器 (I/O 基址 + 偏移):
+   偏移 0x00: HST_STS  (Host Status)     — 状态位 (INTR/BUSY/FAILED/...)
+   偏移 0x02: HST_CNT  (Host Control)    — 命令位 (START/BYTE_DATA/WORD_DATA/...)
+   偏移 0x03: HST_CMD  (Host Command)    — EEPROM 偏移 (发送给 SPD)
+   偏移 0x04: XMIT_SLVA (Transmit Slave Addr) — DIMM 地址 (0x50/0x51/0x52/0x53)
+   偏移 0x05: HST_D0   (Host Data 0)     — 数据寄存器低字节
+   偏移 0x06: HST_D1   (Host Data 1)     — 数据寄存器高字节
+</code></pre>
+<p><strong>BIOS 读取 SPD 的完整流程</strong>：</p>
+<pre><code>1. 检查每个 DIMM 插槽 (0x50/0x51/0x52/0x53):
+
+2. for each slave_address in {0x50, 0x51, 0x52, 0x53}:
+     // 先从偏移 0x00 读 1 字节，看设备是否存在
+     outb(XMIT_SLVA, (slave_address &lt;&lt; 1) | 1)   // 7位地址 + R/W=1
+     outb(HST_CMD, 0x00)                          // 读偏移 0x00
+     outb(HST_CNT, 0x48)                          // START + BYTE_DATA
+
+     等待 HST_STS.BUSY=0
+     if HST_STS.FAILED == 1:
+        continue;  // 该插槽没有 DIMM
+
+     // 连续读 256 字节 (DDR3) 或 512 字节 (DDR4/DDR5)
+     for offset in range(0, spd_size):
+        outb(HST_CMD, offset)     // 设置要读的偏移
+        outb(HST_CNT, 0x48)       // START
+        等待 HST_STS.BUSY=0
+        spd_data[offset] = inb(HST_D0)
+
+3. 解析每个 DIMM 的 SPD 数据 → 得到模块容量、时序、电压等
+</code></pre>
+<p><strong>SPD EEPROM 内部关键字节</strong>（DDR4，共计 512 字节）：</p>
+<pre><code>偏移    长    内容
+─────────────────────────────────────────
+0x00    1    写入字节数 (0x10 SPD总字节数) + SPD 版本
+0x01    1    SPD 版本号
+0x02    1    DRAM 类型 (DDR4=0x0C, DDR5=0x12)
+0x03    1    模块类型 (UDIMM=2, RDIMM=1, LRDIMM=4)
+0x04    1    SDRAM 密度 (每颗芯片容量) + 逻辑 Bank 数
+0x05    1    行地址位 + 列地址位
+0x06    1    信号载入 / 电压等级
+0x0C    1    tRFC (粗粒度)
+0x0D    1    tRFC (细粒度补充)
+0x12-15  4    主时序: tAA, tRCD, tRP, tRAS/tRC
+0x16-17  2    tRAS + tRC
+0x18    1    tFAW (最小四窗口激活)
+...
+0x75    1    tCK (时钟周期) 范围: (tCK_min + tCK_max) / 1000 [ns]
+...
+0x7C-7D  2    JEDEC ID (Bank号 + 厂商编号)
+0x7E    1    厂商位置码
+0x7F    1    厂商年号
+0x80-81  2    模块序列号
+0x82-8D 12    模块型号 (Part Number, ASCII)
+...
+0x100-14F 80  SPD 块 1 (详细时序表)
+0x150-1FF 176 XMP Profile 1 (DDR4)
+0x180-1FF 128 XMP/EXPO Profile (DDR5)
+</code></pre>
+<h3 id="63-内存控制器初始化memory-training">6.3 内存控制器初始化：Memory Training<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#63-内存控制器初始化memory-training" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>SPD 只告诉了”这个内存条说明书上写的时序参数”。但每个 DIMM 插槽到 CPU 的走线长度不同，信号延迟也不同。<strong>Memory Training</strong> 就是自动校准这些电气参数的过程。</p>
+<p>这个过程的硬件实现位于 CPU 内存控制器内部的一组寄存器——BIOS 通过向 IMC 寄存器写入特定的训练命令序列，让硬件自动执行训练算法：</p>
+<pre><code>▲ 这里 BIOC 不需要自己收发 DDR 信号！它是通过设置 IMC 寄存器，
+  由 IMC 硬件自动完成训练回路。
+
+BIOS 做的事:
+  1. 向 IMC 写入训练模式选择寄存器
+  2. 等待训练完成状态位
+  3. 读回校准结果寄存器
+
+IMC 硬件做的事 (自动):
+  ┌─────────────────────────────────────────┐
+  │ DQS (Data Strobe) 门控训练                                                                                                   │
+  │   目的: 找到 DQS 选通脉冲的有效窗口                                                                                    │
+  │   做法: 硬件用 DRAM 的 MPR                                                                                                  │
+  │    (Multi-Purpose Register) 读回已知                                                                                        │
+  │    数据，逐步延迟 DQS 采样点直到                                                                                         │
+  │    数据正确，记录窗口中心                                                                                                     │
+  ├─────────────────────────────────────────┤
+  │ Write Leveling (写延迟均衡)                                                                                                     │
+  │   目的: 补偿从 IMC 到 DRAM 的                                                                                               │
+  │        飞行时间差异                                                                                                                  │
+  │   做法: DRAM 使用 CK 的边沿采样                                                                                          │
+  │        DQS，IMC 逐步延迟 DQS 边                                                                                            │
+  │        沿直到 DRAM 反馈结果对齐                                                                                             │
+  ├─────────────────────────────────────────┤
+  │ Read/Write DQ Deskew (数据线去时滞)                                                                                  │
+  │   目的: 补偿同一字节通路内 8 条 DQ                                                                                       │
+  │        线之间的时间偏差                                                                                                           │
+  │   做法: 每条 DQ 独立延迟，写已知模式                                                                                   │
+  │        读回，找到 eye diagram 中心                                                                                          │
+  ├─────────────────────────────────────────┤
+  │ Vref 校准 (参考电压)                                                                                                                │
+  │   目的: 选择使误码率最低的参考电压                                                                                      │
+  │   做法: 扫描 Vref 范围，在每个点                                                                                            │
+  │        执行 W/R 测试，选误码率最低点                                                                                     │
+  ├─────────────────────────────────────────┤
+  │ RTT/ZQ 校准 (终端电阻/驱动强度)                                                                                          │
+  │   目的: 匹配传输线特性阻抗以减少反射                                                                                   │
+  │   做法: ZQ 引脚外接 240Ω 精密电阻，                                                                                    │
+  │        IMC 校准内部可编程电阻与其匹配                                                                                   │
+  └─────────────────────────────────────────┘
+</code></pre>
+<p>训练完成后 DRAM 方可读写，C 代码才有可用的栈和堆。</p>
+<hr/>
+<h2 id="7-pcipcie-总线--最大规模的探测">7. PCI/PCIe 总线 — 最大规模的探测<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#7-pcipcie-总线--最大规模的探测" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<p>PCIe 总线是现代 x86 平台连接全部外围设备的核心通道。所有不可通过固定 I/O 端口访问的设备，都必须先通过 PCI 枚举发现。</p>
+<h3 id="71-总线拓扑模型">7.1 总线拓扑模型<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#71-总线拓扑模型" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<pre><code>                                  CPU
+                                   │
+                             PCIe Root Complex
+                          (Host Bridge BDF 0:0:0)
+                                   │
+              ┌────────────────────┼────────────────────┐
+              │                    │                    │
+        Root Port 1          Root Port 2         Root Port 3
+        (BDF 0:1:0)          (BDF 0:2:0)         (BDF 0:3:0)
+              │                    │                    │
+         ┌────┴────┐          PCIe Switch       PCIe Endpoint
+         │         │          (桥设备)           (NVMe SSD)
+    Slot 1    Slot 2         Bus 1
+    (GPU)     (空)
+                          ┌────┴────┐
+                        Slot 3   Slot 4
+                        (空)     (网卡)
+
+枚举时: BDF 层级 = Bus.D.Device.Function
+</code></pre>
+<h3 id="72-pci-配置空间--设备身份的身份证">7.2 PCI 配置空间 — 设备身份的”身份证”<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#72-pci-配置空间--设备身份的身份证" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>每个 PCI/PCIe 功能的配置空间包含 256 字节前 64 字节的 Header：</p>
+<pre><code>偏移    长度    内容
+─────────────────────────────────────────────
+0x00    2       Vendor ID          ← 0xFFFF 表示设备不存在
+0x02    2       Device ID          ← 具体型号
+0x04    2       Command            ← I/O Space / Memory Space / Bus Master 使能
+0x06    2       Status             ← Capabilities List / 66MHz / Fast Back-to-Back
+0x08    1       Revision ID
+0x09    3       Class Code:
+                   [23:16] Base Class    (如 0x01=Mass Storage, 0x03=Display, 0x0C=Serial Bus)
+                   [15:8]  Sub-Class     (如 0x06=SATA, 0x08=NVMe, 0x30=xHCI)
+                   [7:0]   Prog IF       (如 AHCI=0x01, NVMe=0x02)
+0x0C    1       Cache Line Size (单位: DWORD)
+0x0D    1       Latency Timer
+0x0E    1       Header Type:
+                   0x00 = 普通设备
+                   0x01 = PCI-PCI 桥 (需要递归枚举次级总线)
+                   0x80 = 多功能设备 (低bit7=1 表示多功能)
+0x10-27 6×4    BAR0-BAR5 (Base Address Registers)
+0x2C    2       Subsystem Vendor ID
+0x2E    2       Subsystem ID
+0x30    4       Expansion ROM Base (扩展 ROM 地址)
+0x34    1       Capabilities Pointer → 指向扩展能力链表
+0x3C    1       Interrupt Line     ← 传统 INTx 中断路由 (IRQ 号)
+0x3D    1       Interrupt Pin      ← 使用哪根 INTx (INTA#=1, INTB#=2...)
+</code></pre>
+<h3 id="73-config_address--config_data--传统-pci-访问机制">7.3 CONFIG_ADDRESS / CONFIG_DATA — 传统 PCI 访问机制<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#73-config_address--config_data--传统-pci-访问机制" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>在 MCFG/ECAM 出现之前，x86 平台使用固定 I/O 端口对 <code>0xCF8 / 0xCFC</code> 实现 PCI 配置空间访问。BIOS 通过这把”钥匙”读到第一个 Device ID 后，就知道有哪些设备了。</p>
+<pre><code>I/O Port
+0xCF8: CONFIG_ADDRESS (32位寄存器)
+
+  Bit 31      : Enable 位 (1 = 使能后续 0xCFC 访问)
+  Bits 30:24  : 保留 (必须为 0)
+  Bits 23:16  : Bus Number     (0-255)
+  Bits 15:11  : Device Number  (0-31)
+  Bits 10:8   : Function Number (0-7)
+  Bits 7:2    : Register Offset (DWORD 对齐, 即 offset/4)
+  Bits 1:0    : 必须为 0
+
+0xCFC: CONFIG_DATA (32位寄存器) — 对应当前 CONFIG_ADDRESS 的读写
+</code></pre>
+<p><strong>访问示例</strong>：</p>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="asm" data-theme="github-light github-dark"><code data-language="asm" data-theme="github-light github-dark" style="display:grid;"><span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; 读取 BDF 0:0:0, Offset 0x00 (Vendor ID)</span></span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">mov</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> eax</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">0x80000000</span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">        ; Bus=0, Dev=0, Func=0, Off=0, Enable=1</span></span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">mov</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> dx</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">0xCF8</span></span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">out</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> dx</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">eax</span></span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">mov</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> dx</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">0xCFC</span></span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">in</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">  eax</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">dx</span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">                ; EAX 低 16 位 = Vendor ID</span></span>
+<span data-line> </span>
+<span data-line><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">; 读取 BDF 0:31:0, Offset 0x04 (Command + Status)</span></span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">mov</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> eax</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">0x8000F804</span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">        ; Bus=0, Dev=31, Func=0, Off=4, Enable=1</span></span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">mov</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> dx</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">0xCF8</span></span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">out</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> dx</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">eax</span></span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">mov</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> dx</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">0xCFC</span></span>
+<span data-line><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">in</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">  eax</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">dx</span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;">                ; EAX = Command(15:0) + Status(31:16)</span></span></code></pre></figure>
+<h3 id="74-ecam-mmio-enhanced-configuration-access">7.4 ECAM (MMIO Enhanced Configuration Access)<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#74-ecam-mmio-enhanced-configuration-access" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>PCIe 引入了增强配置访问机制（ECAM），把每个 Bus 的 256 个 Device × 8 个 Function × 4096 字节配置空间<strong>平铺成连续内存映射区域</strong>，通过 ACPI MCFG 表声明基址：</p>
+<pre><code>每个总线占用: 256 (Device) × 8 (Function) × 4096 (ConfigSpace) = 8 MiB
+内存中直接寻址:
+    addr = ECAM_BASE + (Bus &lt;&lt; 20) + (Device &lt;&lt; 15) + (Function &lt;&lt; 12) + Offset
+</code></pre>
+<p>BIOS 在阶段 5（构建 ACPI）时填写 MCFG 表，告诉操作系统 ECAM 的物理基址和设备寻址方式。</p>
+<h3 id="75-枚举算法及完整事件序列">7.5 枚举算法及完整事件序列<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#75-枚举算法及完整事件序列" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>BIOS 的 PCI 枚举就是一个<strong>深度优先搜索算法</strong>：</p>
+<pre><code>全局变量: next_bus = 1   (Bus 0 由 Host Bridge 自身占用)
+
+枚举函数: enumerate_bus(bus_number)
+  for device = 0 to 31:
+    for function = 0 to 7:
+
+      // 步骤 1: 探测是否存在
+      Vendor ID = read_config(bus, device, function, 0x00, 2)
+      if Vendor ID == 0xFFFF:
+          continue   // 该 BDF 没有设备
+
+      // 步骤 2: 读取设备身份
+      Device ID     = read_config(bus, device, function, 0x02, 2)
+      Class Code    = read_config(bus, device, function, 0x09, 3)
+      Header Type   = read_config(bus, device, function, 0x0E, 1)
+      SubsysVenID   = read_config(bus, device, function, 0x2C, 2)
+      SubsysID      = read_config(bus, device, function, 0x2E, 2)
+      CapPtr        = read_config(bus, device, function, 0x34, 1)
+      Revision      = read_config(bus, device, function, 0x08, 1)
+
+      // 步骤 3: 探测扩展能力
+      while CapPtr != 0:
+          CapID  = read_config(..., CapPtr,     1)
+          CapVer = read_config(..., CapPtr + 1, 1)
+          switch (CapID):
+              0x01: PCI Power Management
+              0x05: MSI
+              0x10: PCI Express ← 包含 Link Cap/Status, Dev Cap/Status
+              0x11: MSI-X
+          CapPtr = read_config(..., CapPtr + 1, 1)  // Next Capability
+
+      // 步骤 4: 判断是否需要递归枚举下游
+      if HeaderType &amp; 0x01 == 0x01:  // PCI-PCI 桥
+          // 分配次级总线号
+          secondary_bus = next_bus
+          next_bus += 1
+
+          write_config(..., 0x18, secondary_bus, 1)  // Secondary Bus
+          // Subordinate Bus 暂不写入，等下游枚举完再回填
+
+          enumerate_bus(secondary_bus)               // 递归!
+
+          // 回填 Subordinate Bus
+          write_config(..., 0x19, next_bus - 1, 1)   // Subordinate Bus
+
+      // 步骤 5: 非桥设备，检查单功能/多功能
+      // 若 HeaderType bit7 == 0 (单功能)，停止该 Device 的 Function 循环
+
+    顶层调用: enumerate_bus(0)
+</code></pre>
+<h3 id="76-bar-大小探测与地址分配">7.6 BAR 大小探测与地址分配<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#76-bar-大小探测与地址分配" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>BAR 的高位在只读时返回硬件锁定的”需要多少地址空间”，软读改写后便能测出：</p>
+<pre><code>探测 BAR 大小:
+    addr = BAR_offset  (0x10, 0x14, 0x18, 0x1C, 0x20, 0x24)
+
+    原值 = read_config(bus, dev, func, addr, 4)
+    write_config(bus, dev, func, addr, 0xFFFFFFFF, 4)
+    读回值 = read_config(bus, dev, func, addr, 4)
+    write_config(bus, dev, func, addr, 原值, 4)   // 复原
+
+    if (读回值 == 0):
+        BAR 不存在，跳过
+
+    if (读回值 &amp; 1 == 1):   // I/O BAR
+        掩码 = 0xFFFFFFFC
+        大小 = (~(读回值 &amp; 掩码)) + 1
+    else:                    // Memory BAR
+        type = (读回值 >> 1) &amp; 3  // 00=32bit, 10=64bit
+        掩码 = 0xFFFFFFF0
+        大小 = (~(读回值 &amp; 掩码)) + 1
+        if type == 2:  64bit BAR → 下个 BAR 也属于它
+
+    从全局 I/O 或 MMIO 地址空间分配对应大小的对齐区域
+    write_config(bus, dev, func, addr, allocated_base, 4)
+</code></pre>
+<hr/>
+<h2 id="8-传统-io-设备--固定地址的隐式探测">8. 传统 I/O 设备 — 固定地址的”隐式探测”<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#8-传统-io-设备--固定地址的隐式探测" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<p>有些设备不需要 PCI 枚举——它们的 I/O 端口地址由传统 PC 架构锁定，BIOS 无需”探测存在性”，只需要检测是否真的存在。</p>
+<h3 id="81-8259-pic-可编程中断控制器">8.1 8259 PIC (可编程中断控制器)<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#81-8259-pic-可编程中断控制器" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<pre><code>I/O 端口地址 (固定):
+  0x20: Master PIC 命令端口
+  0x21: Master PIC 数据端口
+  0xA0: Slave PIC 命令端口
+  0xA1: Slave PIC 数据端口
+
+BIOS 探测:
+  1. 通过 ICW1-ICW4 (初始化命令字) 重新初始化 PIC
+  2. 写入 ICW1 (0x11): 边沿触发 + 级联模式 + 需要 ICW4
+  3. ICW2: 设置中断向量基址 (Master=0x08, Slave=0x70)
+  4. ICW3: 通知 Master/Slave 的级联关系
+  5. ICW4: 设置 8086 模式 + 自动 EOI
+  6. 全部写完后验证 OCW1 (屏蔽寄存器) 是否可读写
+</code></pre>
+<h3 id="82-8254-pit-可编程间隔定时器">8.2 8254 PIT (可编程间隔定时器)<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#82-8254-pit-可编程间隔定时器" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<pre><code>I/O 端口地址 (固定):
+  0x40: 计数器 0 数据端口
+  0x41: 计数器 1 数据端口
+  0x42: 计数器 2 数据端口
+  0x43: 控制字寄存器
+
+BIOS 探测:
+  写入 0x43 (控制字) → 选择计数器 0 + 模式 3 (方波) + 16位计数
+  写入 0x40 低字节、高字节 → 设置分频值
+  读回 0x40 验证计数是否递减
+</code></pre>
+<h3 id="83-rtccmos-实时钟">8.3 RTC/CMOS (实时钟)<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#83-rtccmos-实时钟" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<pre><code>I/O 端口地址 (固定):
+  0x70: RTC 地址寄存器 (bit7 = NMI 禁用)
+  0x71: RTC 数据寄存器
+
+  RTC 寄存器:
+    0x00-0x09: 时间/日期/闹钟
+    0x0A:      状态 A (UIP = Update In Progress 标志)
+    0x0B:      状态 B (12/24h, 二进制/BCD 格式)
+    0x0C-0x0D: 状态 C, D (中断标志, 有效 CMOS)
+    0x0E-0x3F: POST 诊断码 &amp; 用户设置
+
+BIOS 探测: RTC 没有&quot;不存在&quot;的可能 (在 PCH 内部固定集成)
+  直接读取 0x0D bit7 → 若为 1 表示 CMOS 电池有效
+  读取 0x00-0x09 验证时间数值范围满足 BCD 格式
+</code></pre>
+<h3 id="84-8042-键盘控制器-kbc">8.4 8042 键盘控制器 (KBC)<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#84-8042-键盘控制器-kbc" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<pre><code>I/O 端口地址 (固定):
+  0x60: 数据端口 (读=接收缓冲, 写=发送缓冲)
+  0x64: 命令端口 (读=状态, 写=命令)
+
+BIOS 探测:
+  1. 读 0x64 状态寄存器:
+     bit0 = 1 (输出缓冲满) → 可能有多余数据
+     bit1 = 1 (输入缓冲满) → 当前不能写入
+
+  2. 等 OBF=0, IBF=0 后，向 0x64 写入 AAh (自检命令)
+
+  3. 等待 0x60 输出, 预期返回 0x55 (自检通过)
+
+  4. 若返回 0x55: 
+     → KBC 存在且正常
+     → 继续发送 0xAB (键盘接口初始化) → 键盘存在
+     → 发送 0xA7 (禁止鼠标) / 0xA8 (使能鼠标)
+  
+  5. 若读 0x60 在几次重试后仍无返回:
+     → PCH 可能没有 Super I/O 的 KBC (较新平台)
+     → 直接跳过, 用 USB 键盘
+</code></pre>
+<h3 id="85-super-io-芯片与-lpc-总线">8.5 Super I/O 芯片与 LPC 总线<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#85-super-io-芯片与-lpc-总线" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>Super I/O 芯片（如 Nuvoton NCT6798D、ITE IT8689E）挂在 LPC 总线上，内部集成了：</p>
+<pre><code>Super I/O 内部模块:
+  ├── UART (串口 1-4)            → 0x3F8 / 0x2F8 / 0x3E8 / 0x2E8
+  ├── LPT (并口)                 → 0x378 / 0x278
+  ├── Floppy Controller          → 0x3F0
+  ├── GPIO (通用 I/O)            → 平台特有
+  ├── Hardware Monitor           → 温度/风扇/电压
+  ├── WDT (Watchdog Timer)       → 可编程看门狗
+  └── ACPI Embedded Controller   → 笔记本的电池/热键/亮度
+
+BIOS 探测 Super I/O:
+  1. 通过 LPC Bridge (BDF 0:31:0) 的寄存器知道 Super I/O 基址
+
+  2. 向 Super I/O 芯片写入配置序列 (通常是 0x87 0x87 → 进入 PnP 模式):
+     outb(2E, 0x87); outb(2F, 0x87)  // ITE/Nuvoton 进入模式
+
+  3. 读取 Chip ID:
+     outb(2E, 0x20); chip_id = inb(2F)
+     → 查到 {0xCA: &quot;NCT6798D&quot;, 0x3890: &quot;IT8689E&quot;, ...}
+
+  4. 启用需要的外设 (如 UART#1):
+     outb(2E, 0x07); outb(2F, 2)     // LDN=2 (串口)
+     outb(2E, 0x30); outb(2F, 1)     // 使能 !
+     outb(2E, 0x60); outb(2F, 0x03); outb(2E, 0x61); outb(2F, 0xF8)
+     // → 串口即映射到 0x3F8
+
+  5. 退出配置模式:
+     outb(2E, 0xAA)  // ITE/Nuvoton 退出
+</code></pre>
+<hr/>
+<h2 id="9-存储设备探测">9. 存储设备探测<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#9-存储设备探测" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<h3 id="91-sata-ahci-控制器与设备识别">9.1 SATA AHCI 控制器与设备识别<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#91-sata-ahci-控制器与设备识别" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>SATA/AHCI 是通过 PCI 枚举发现的第一个 Mass Storage 控制器（Class=0x01, Sub=0x06）。找到控制器后，BIOS 需要进一步向物理端口发 ATA 命令来知道到底接了什么样的硬盘。</p>
+<p><strong>AHCI 寄存器结构</strong>：</p>
+<p>AHCI BAR（BAR5）内存映射到 HBA 寄存器区，其中 <strong>Port 0 起每个端口有独立的 PxCLB/PxFB/PxIS 等寄存器</strong>：</p>
+<pre><code>HBA Memory Registers (偏移自 ABAR):
+  0x000: CAP     (Host Capabilities)   — 端口数量、64位支持
+  0x004: GHC     (Global Host Control) — HBA 复位、AHCI 使能、中断使能
+  0x008: IS      (Interrupt Status)
+  0x00C: PI      (Ports Implemented)   — 位图 (bit0=1 → Port 0 实现)
+  0x010: VS      (AHCI Version)        — 1.0/1.1/1.2/1.3
+  ...
+  0x100: Port 0 PxCLB (Command List Base Address)
+  0x108: Port 0 PxFB  (FIS Base Address)
+  0x110: Port 0 PxIS  (Interrupt Status)
+  0x118: Port 0 PxIE  (Interrupt Enable)
+  0x128: Port 0 PxSIG (Signature) → 检测设备类型
+  0x12C: Port 0 PxSSTS (Serial ATA Status) → DET=3h 表示设备已连接
+  0x130: Port 0 PxSCTL (Serial ATA Control)
+  ...
+</code></pre>
+<p><strong>BIOS 探测 SATA 设备的完整流程</strong>：</p>
+<pre><code>1. PCI 枚举 Class=0x01 Sub=0x06 → SATA AHCI 控制器
+   Vendor/Device → Intel/AMD/ASMedia AHCI
+
+2. HBA 初始化:
+   ABAR = BAR5
+   MR(ABAR + 0x004, GHC.AE=1)     // 启用 AHCI 模式
+   Ports = CAP &amp; 0x1F              // 总端口数
+
+3. for each port in ports:
+      // 检查端口是否已实现
+      if (PI bit port == 0): continue
+
+      // 检查是否有设备连接
+      ssts = MR(ABAR + 0x100 + 0x80*port + 0x28)  // PxSSTS
+      if (ssts &amp; 0x0F != 3): continue  // DET=3→设备存在
+
+      // 分配 Command List 和 FIS 的内存
+      CLB = alloc_aligned_1K_phys()
+      FB  = alloc_aligned_256B_phys()
+      MR(ABAR + 0x100 + 0x80*port + 0x00) = CLB
+      MR(ABAR + 0x100 + 0x80*port + 0x08) = FB
+
+      // 启用端口 DMA (PxCMD.ST=1)
+      MR(ABAR + 0x100 + 0x80*port + 0x18, ST=1)
+
+      // 等待设备就绪
+      while (MR(PxTFD) &amp; 0x88): spin
+
+      // 发送 IDENTIFY DEVICE (ATA Command 0xEC)
+      设置 Command Header [0]:
+         CFL=5  (5 个 FIS 的单位)
+         P=1    (Prefetchable)
+         W=0    (Read)
+         PRDT length = 512
+      设置 Command Table:
+        FIS = H2D Register FIS with Command=0xEC (Identify Device)
+        PRDT[0] = DBA (物理地址) + DBC (512字节)
+      启动命令: MR(PxCI) = 1
+
+      // 等中断完成后解析 512 字节 IDENTIFY 数据:
+      struct ata_identify:
+        Word 0    : 设备类型 (bit15=0→ATA, bit15=1→ATAPI)
+        Word 1-9  : 默认柱面/磁头/扇区 (CHS)
+        Word 10-19: 序列号 (20字节ASCII)
+        Word 23-26: 固件版本
+        Word 27-46: 型号
+        Word 60-61: LBA48 总扇区数 (QWORD) ← 容量
+        Word 76   : NCQ 支持及队列深度
+        Word 83   : 支持的命令 (LBA48/TCQ/...)
+        Word 106  : 物理扇区大小 / 逻辑扇区大小
+        Word 117-118: SSD/PIO 参数
+</code></pre>
+<h3 id="92-nvme-控制器与设备识别">9.2 NVMe 控制器与设备识别<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#92-nvme-控制器与设备识别" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>NVMe 走 PCIe 通道，Class=0x01 Sub=0x08，用一种完全不同于 SATA 的命令队列机制与 SSD 通信。</p>
+<p><strong>NVMe 寄存器空间</strong>（由 BAR0 映射）：</p>
+<pre><code>偏移 0x00: CAP  (Controller Capabilities)
+           [15:0]  = MQES (最大队列条目数)
+           [37:32] = CSS (I/O 命令集, bit0=1→NVM Express)
+
+偏移 0x08: VS   (版本)
+
+偏移 0x14: CC   (Controller Configuration)
+           [0] = EN (使能控制器)
+
+偏移 0x1C: CSTS (Controller Status)
+           [0] = RDY (控制器就绪)
+
+偏移 0x24: AQA  (Admin Queue Attributes)
+           [11:0]  = ASQS (Admin SQ 大小)
+           [27:16] = ACQS (Admin CQ 大小)
+
+偏移 0x28: ASQ  (Admin SQ 基址, 64位物理地址, 4K 对齐)
+偏移 0x30: ACQ  (Admin CQ 基址, 64位物理地址, 4K 对齐)
+</code></pre>
+<p><strong>BIOS 探测 NVMe 设备的完整流程</strong>：</p>
+<pre><code>1. PCI 枚举 Class=0x01 Sub=0x08 ProgIF=0x02 → NVMe 控制器
+   BAR0 = MMIO 寄存器基址
+
+2. 控制器初始化:
+   MR(CC.EN) = 0                    // 关掉控制器 (若已开启)
+   while (MR(CSTS.RDY) != 0): spin  // 等待就绪位清除
+
+   MR(AQA) = (31&lt;&lt;16 | 31)          // ASQ=31, ACQ=31 (32 个条目)
+   ASQ_phys = alloc_4K_aligned(N * sizeof(64B SQ Entry))
+   ACQ_phys = alloc_4K_aligned(N * sizeof(16B CQ Entry))
+   MR(ASQ) = ASQ_phys
+   MR(ACQ) = ACQ_phys
+
+   MR(CC) = I/O SQES=6 (64字节), I/O CQES=4 (16字节), EN=1
+   while (MR(CSTS.RDY) != 1): spin  // 等待就绪
+
+3. 发送 Identify Controller 命令:
+   构造 SQ Entry [0]:
+     OPC (Opcode) = 0x06  (Admin Identify)
+     CID (Command ID) = 0
+     NSID = 0  (Identify Controller)
+     PRP[0] = output_buffer_phys (4096 字节对齐)
+   提交: 写 SQ Tail Doorbell
+
+   等待 CQ Entry → 解析结果:
+     struct nvme_identify_ctrl:
+       PCI VID       : [63:48], [1:2]
+       PCI SSVID     : [67:64]
+       Serial Number : [4:23]   (20 字节 ASCII)
+       Model Number  : [24:63]  (40 字节 ASCII)
+       Firmware Rev  : [64:71]  (8 字节 ASCII)
+       NN            : [516:519]  → 支持的 Namespace 数量
+
+4. 对每个 Namespace:
+   发送 Identify Namespace (OPC=0x06, NSID=NsID, CNS=0)
+   解析结果:
+     NSZE    = QWORD [0]      → 总逻辑块数
+     NCAP    = QWORD [8]      → 总容量 (字节)
+     LBAF[i] : 
+       [130 + i*4 + 0] = MS (元数据大小)
+       [130 + i*4 + 3] = LBADS (LBA 数据大小, 如 2^9=512B, 2^12=4096B)
+     FLBAS : [26] &amp; 0x0F → 当前格式化的 LBAF 索引
+</code></pre>
+<hr/>
+<h2 id="10-usb-控制器发现与设备枚举">10. USB 控制器发现与设备枚举<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#10-usb-控制器发现与设备枚举" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<p>USB 是 PCI 枚举的下游设备。BIOS 先找到 USB 主机控制器，再通过控制器访问下游设备。</p>
+<h3 id="101-四种-usb-控制器类型">10.1 四种 USB 控制器类型<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#101-四种-usb-控制器类型" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="table-container"><table><thead><tr><th>Class</th><th>Sub</th><th>名称</th><th>速度</th><th>关键寄存器特点</th></tr></thead><tbody><tr><td>0x0C03</td><td>0x00</td><td>UHCI (Intel)</td><td>USB 1.1 (12Mbps)</td><td>I/O 端口, 固定帧列表</td></tr><tr><td>0x0C03</td><td>0x10</td><td>OHCI</td><td>USB 1.1 (12Mbps)</td><td>MMIO, HCCA 共享内存</td></tr><tr><td>0x0C03</td><td>0x20</td><td>EHCI</td><td>USB 2.0 (480Mbps)</td><td>MMIO, 周期/异步调度</td></tr><tr><td>0x0C03</td><td>0x30</td><td>xHCI</td><td>USB 3.x (5–20Gbps)</td><td>MMIO, 完整设备上下文模型</td></tr></tbody></table></div>
+<p><strong>BIOS 识别流程</strong>：</p>
+<pre><code>PCI 枚举 → 发现 USB 控制器
+  → 检查 Class Code:
+      0x0C0300 → UHCI  (读 I/O BAR)
+      0x0C0320 → EHCI  (检查伴随的 UHCI companion)
+      0x0C0330 → xHCI  (读 MMIO BAR, 支持全部 USB 版本)
+
+BIOS 在 UEFI/CSM 模式:
+  若同时有 EHCI 和 xHCI → xHCI 优先, USB3 可借用 xHCI 的 USB2 端口
+  若只有 EHCI + UHCI → 每个 UHCI 端口有自己的 companion EHCI 映射
+</code></pre>
+<h3 id="102-xhci-端口探测与地址分配">10.2 xHCI 端口探测与地址分配<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#102-xhci-端口探测与地址分配" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>xHCI 提供了一个非常干净的设备模型，每个物理端口有一个 PORTSC 寄存器，所有操作通过 Doorbell + 命令环来完成。</p>
+<p><strong>xHCI 寄存器基址</strong>来自 PCI BAR0，操作流程：</p>
+<pre><code>1. 控制器初始化:
+    停止 HC (USBCMD.RS=0), 等待 USBSTS.HCH=1
+    分配 DCBAAP (Device Context Base Address Array Pointer)
+    分配 Command Ring
+    分配 Event Ring (ERST)
+    写 USBCMD.RS=1 启动控制器
+    等待 USBSTS.HCH=0
+
+2. 探测每个端口:
+    EXT_CAPS = 遍历 xHCI 扩展能力寄存器链:
+      找到各协议 (USB3 Gen1/Gen2, USB2) 关联的端口范围
+
+    for (port = 1; port &lt;= MAXPORTS; port++):
+        PORTSC = 读端口状态控制寄存器 (偏移 = 0x400 + port*0x10):
+          CCS (Current Connect Status) bit0  = 1? → 设备已连接
+          PED (Port Enabled/Disabled) bit1  = 1? → 端口已启用
+          PP  (Port Power) bit9  = 1? → 供电已开
+
+        若 CCS=1 且 PED=0:
+          → 写 PORTSC.PP=1 (给端口加电)
+          → 写 PORTSC.PR=1 (触发端口复位)
+          → 等待 PED=1 (复位完成, 设备可以通信)
+
+3. 分配设备上下文和地址:
+    分配 Device Context Base Address (64字节 × 32 Slots)
+    发送 Enable Slot 命令 (Command Ring):
+        → Command Completion 返回 Slot ID (1-255)
+
+    写 Input Context (Slot = slot_id):
+        Slot Context:
+           Root Hub Port Number = port
+           Speed = PORTSC.PS (1=Full, 2=Low, 3=High, 4=Super, 5=SuperPlus)
+        EP0 Context:
+           Max Packet Size = 8 (默认) + 其他属性
+
+    发送 Address Device 命令:
+        Input → Device Context Base Array + Input Context
+        → 硬件执行后, 返回 Output Context (实际分配的 USB 设备地址)
+
+4. 读取设备描述符:
+    Doorbell EP0 传输:
+        Setup Packet: 80 06 00 01 00 00 08 00
+                      (bmReqType=IN, bReq=GET_DESCRIPTOR,
+                       wVal=DEVICE, wLen=8)
+    设备返回 8 字节设备描述符:
+        bLength         (1)    = 18 (USB 2.0+) 或 12 (USB 1.x)
+        bDescriptorType (1)    = 1 (Device)
+        bcdUSB          (2)    = USB 版本 (如 0x0320=3.2)
+        bDeviceClass    (1)
+        bDeviceSubClass (1)
+        bDeviceProtocol (1)
+        bMaxPacketSize  (1)    = 8/16/32/64/512
+
+5. 再次发送 Address Device 命令，更新 EP0 MaxPacketSize 为真实值
+</code></pre>
+<hr/>
+<h2 id="11-平台固件表--bios-给操作系统的接口">11. 平台固件表 — BIOS 给操作系统的”接口”<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#11-平台固件表--bios-给操作系统的接口" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<p>BIOS 把所有探测到的硬件信息打包进三张表：</p>
+<h3 id="111-e820--物理内存布局">11.1 E820 — 物理内存布局<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#111-e820--物理内存布局" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>BIOS 在所有探测完成后，汇总各区间的物理内存情况，通过 <code>INT 15h AX=E820h</code> 提供。操作系统（或 bootloader）逐块读取，构成可用的物理内存池。</p>
+<h3 id="112-smbios--硬件资产清单">11.2 SMBIOS — 硬件资产清单<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#112-smbios--硬件资产清单" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>BIOS 在物理内存的 <code>0xF0000–0xFFFFF</code> 区域内写入 SMBIOS 入口点（<code>_SM_</code> 或 <code>_SM3_</code> 签名），表中包含每个硬件组件的字符串化描述（Type 0/1/2/4/7/17/19…）。Linux 需扫描此区间找到 <code>_SM3_</code> 后解析。</p>
+<h3 id="113-acpi--设备树与电源管理">11.3 ACPI — 设备树与电源管理<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#113-acpi--设备树与电源管理" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>BIOS 构建 RSDP（Root System Description Pointer），其物理地址在内存中可扫描 <code>RSD PTR</code> 字符串找到，指向 RSDT/XSDT 表，再指向 MADT、MCFG、DSDT/SSDT、SRAT、DMAR 等数十个子表。DSDT 包含整个设备的 AML 字节码（ACPI Machine Language），操作系统内部的 ACPICA 解释引擎执行这些字节码，将设备树注册到设备模型中。</p>
+<hr/>
+<h2 id="12-bios-探测架构全景图">12. BIOS 探测架构全景图<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#12-bios-探测架构全景图" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<pre><code>┌─────────────────────────────────────┐
+│                               CPU 上电复位                                                                             │
+│                          第一条指令 @ 0xFFFFFFF0                                                                │
+└────────────────┬────────────────────┘
+                                                 │
+          ┌───────────┴──────────────────┐
+          │                 芯片组 探测                                                                       │
+          │  ┌────────────┐  ┌─────────────┐  │
+          │  │ Host Bridge                       │  │ LPC Bridge                            │  │
+          │  │ BDF 0:0:0                         │  │ BDF 0:31:0                            │  │
+          │  │ 读 Vendor/Device             │  │ 读 Vendor/Device                 │  │
+          │  │ → 确定 CPU+平台            │   │ → 确定 PCH/Super I/O        │  │
+          │  └────────────┘ └─────────────┘   │
+          └───────────┬───────────────────┘
+                                                    │
+      ┌─────┬─────┬┴──────┬──────┐
+      │                 │                  │                        │                     │
+       ▼               ▼                   ▼                        ▼                     ▼
+┌────┐ ┌────┐ ┌─────┐ ┌─────┐ ┌─────┐
+│ CPUID   │ │ SMBus   │ │ PCI/PCIe │ │ 固定 I/O      │ │ LPC 总线 │
+│ 指令      │ │  协议      │ │ 配置空间 │ │  端口           │ │ 设备        │
+│              │ │               │ │                │ │                    │ │                │
+│ • 型号   │ │ • SPD     │ │ • 设备    │ │ • PIC 0x20   │ │ • KBC    │
+│ • 缓存   │ │ • DIMM   │ │ • 桥       │ │ • PIT 0x40    │ │ • UART   │
+│ • 拓扑   │ │   容量      │ │ • BAR    │ │ • RTC 0x70   │ │ • GPIO   │
+│ • 特性   │ │ • 时序     │ │ • MSI-X  │ │ • DMA 0x00  │ │ • HWM    │
+│ • 频率   │ │ • XMP     │ │ • 扩展    │ │ • CBA           │ │ • WDT    │
+│              │ │                │ │   能力     │ │                     │ │               │
+└────┘ └────┘ └─────┘ └──────┘ └────┘
+    │                     │                 │                      │                         │
+    │                     │                 │                      │                         │
+    └──┬───┘                 │                      │                         │
+               │                              │                       │                         │
+                   ▼                              ▼                      ▼                        │
+          E820 表                  PCI BAR              中断路由                  │
+        (物理内存布局)        (设备地址空间)     (IRQ 映射)                │
+                 │                            │                       │                        │
+                 │                            │                       └───┬───┘
+                 │                            │                                     │
+                 ├────────┴──────────┤
+                 │                                                                    │
+┌─────┴─────┐                        ┌─────┴──────┐
+│     ACPI 表                       │                       │     SMBIOS 表                   │
+│  • MADT → CPU/IO-APIC │                       │  • Type 0: BIOS                │
+│  • MCFG → ECAM 映射    │                       │  • Type 1/2: 系统/主板     │
+│  • DSDT → 设备树          │                        │  • Type 4: CPU                 │
+│  • SRAT → NUMA            │                       │  • Type 7: Cache             │
+│  • DMAR → VT-d             │                        │  • Type 17: DIMM             │
+│  • SSDT → CPU PM        │                        │  • Type 32: Boot               │
+└────┬──────┘                         └────┬───────┘
+                 │                                                              │
+                 └───────┬─────────┘
+                                              ▼
+                  ┌────────────────────┐
+                  │   操作系统 接收                                             │
+                  │  Linux ACPICA,                                              │
+                  │  dmidecode,                                                 │
+                  │  memblock,                                                   │
+                  │  PCI 子系统                                                   │
+                  └────────────────────┘
+</code></pre>
+<p>上图展示的是一条严格的<strong>分层递进</strong>链路，自上而下分为四个层级：</p>
+<p><strong>第一层 · 复位入口</strong> — CPU 上电后从 <code>0xFFFFFFF0</code> 取第一条指令，执行 SPI ROM 中 BIOS 的复位向量代码。此时没有内存、没有设备信息，唯一可用的是 CPU 内部的 L1/L2 缓存（Cache-as-RAM）作为临时栈。</p>
+<p><strong>第二层 · 芯片组识别</strong> — BIOS 做的第一件事是通过固定 BDF <code>0:0:0</code>（Host Bridge）和 <code>0:31:0</code>（LPC Bridge）读 PCI 配置空间，获取 Vendor/Device ID。这一步确定平台型号后，后续所有设备的寄存器基址、初始化参数表才有据可查。若此步失败，BIOS 无法继续。</p>
+<p><strong>第三层 · 五路并行探测</strong> — 芯片组就绪后，五条探测线路同时展开：</p>
+<ul>
+<li><strong>CPUID</strong> 走 CPU 内部指令通道，不依赖外部总线，直接读出型号、缓存拓扑、特性标志和核心数</li>
+<li><strong>SMBus</strong> 通过 I²C 协议访问每个 DIMM 插槽上的 SPD EEPROM，获取内存条容量和时序参数，随即触发 IMC 硬件执行 Memory Training 使 DRAM 可用</li>
+<li><strong>PCI/PCIe</strong> 通过 <code>0xCF8/0xCFC</code> 或 ECAM 遍历全部 BDF 空间，深度优先枚举所有桥和终端设备，读出 Vendor ID / Device ID / Class Code，并为每个设备分配 BAR 地址空间和 MSI/MSI-X 中断向量</li>
+<li><strong>固定 I/O</strong> 按 PC/AT 遗留端口号直接访问 PIC、PIT、RTC，写命令字后读回验证设备存在</li>
+<li><strong>LPC 总线</strong> 通过 <code>0x2E/0x2F</code> 端口进入 Super I/O 芯片的 PnP 配置模式，依次使能所需的传统外设</li>
+</ul>
+<p><strong>第四层 · 数据汇总</strong> — 五路探测完成后，探测到的全部信息汇入三张标准表交给操作系统：E820 表描述物理内存布局（哪些地址可用、哪些被硬件占用）；ACPI 表（MADT/MCFG/DSDT/SRAT/DMAR 等）描述设备树、中断路由、NUMA 拓扑和 IOMMU 映射；SMBIOS 表（Type 0/1/2/4/7/17 等）提供人类可读的硬件资产清单。操作系统通过这些表获取全部硬件信息，开始构建自己的设备模型和驱动框架。</p>
+<hr/>
+<h2 id="13-总结每种硬件的探测手段输出格式与-linux-获取方式">13. 总结：每种硬件的探测手段、输出格式与 Linux 获取方式<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#13-总结每种硬件的探测手段输出格式与-linux-获取方式" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="table-container"><table><thead><tr><th>硬件类别</th><th>BIOS 探测手段</th><th>探测原理</th><th>信息输出格式</th><th>Linux 获取方式</th></tr></thead><tbody><tr><td>CPU</td><td>CPUID / RDMSR</td><td>无需总线，CPU 内部值寄存器</td><td>SMBIOS Type 4 / ACPI MADT</td><td><code>/proc/cpuinfo</code>, <code>dmidecode -t processor</code></td></tr><tr><td>物理内存</td><td>SMBus → SPD + IMC 训练</td><td>I²C 读 DIMM EEPROM + HW 电气训练</td><td>E820 Type 1 / SMBIOS Type 17</td><td><code>/proc/meminfo</code>, <code>/sys/firmware/memmap</code></td></tr><tr><td>Host Bridge</td><td>PCI 0:0:0 (架构固定)</td><td>CONFIG_ADDRESS/DATA 读 Vendor/Device</td><td>内部 Device ID 表</td><td><code>lspci -s 00:00.0</code></td></tr><tr><td>LPC Bridge</td><td>PCI 0:31:0 (架构固定)</td><td>同上</td><td>内部 Device ID 表</td><td><code>lspci -s 00:1f.0</code></td></tr><tr><td>Super I/O</td><td>LPC 总线 → 写 0x87 进 PnP 模式 → 读 Chip ID</td><td>I/O 端口 2E/2F 写入→读取</td><td>内部 Chip ID 表</td><td><code>sensors-detect</code> / <code>superiotool</code></td></tr><tr><td>PCIe 设备</td><td>BDF 三循环 + 读 Vendor ID</td><td>0xCF8/CFC 或 ECAM</td><td>PCI Vendor/Device/SVID/SSID/Class</td><td><code>lspci</code>, <code>/sys/bus/pci/devices/</code></td></tr><tr><td>SATA HDD/SSD</td><td>AHCI Port → ATA IDENTIFY</td><td>设置 PxCLB, PxFB, 发 ATA Cmd 0xEC</td><td>IDENTIFY 512 字节</td><td><code>smartctl -i</code>, <code>hdparm -I</code></td></tr><tr><td>NVMe SSD</td><td>NVMe Admin Q → Identify</td><td>创建 Admin SQ/CQ, 发 OPC 0x06</td><td>Identify Ctrl + Identify NS</td><td><code>nvme id-ctrl</code>, <code>nvme list</code></td></tr><tr><td>USB 设备</td><td>xHCI Port → Address Dev → Get Descriptor</td><td>Doorbell 传输, Event Ring 完成</td><td>设备描述符 18 字节</td><td><code>lsusb -v</code></td></tr><tr><td>PIC (8259)</td><td>I/O 0x20/0xA0 (架构固定)</td><td>ICW1-ICW4 初始化和验证</td><td>中断向量基址</td><td><code>/proc/interrupts</code></td></tr><tr><td>PIT (8254)</td><td>I/O 0x40/0x43 (架构固定)</td><td>写控制字 + 写计数器值验证</td><td>计数器频率 1,193,182 Hz</td><td>Linux 内部 <code>i8253_lock</code></td></tr><tr><td>RTC</td><td>I/O 0x70/0x71 (架构固定)</td><td>读状态 D bit7 判断电池有效性</td><td>BCD 编码时间</td><td><code>/sys/class/rtc/</code>, <code>hwclock</code></td></tr><tr><td>KBC (8042)</td><td>I/O 0x60/0x64 → 发 AAh 自检命令</td><td>判断是否返回 0x55</td><td>键盘/鼠标存在, 键位映射</td><td>内核 <code>i8042</code> 驱动</td></tr></tbody></table></div>
+<p><strong>核心理念</strong>：BIOS 从 CPU 自身开始，通过 PCI 配置空间找到总线拓扑，通过 SMBus 识别内存容量，通过 LPC 发现传统设备，再通过 AHCI/xHCI/NVMe 等具体协议识别下游设备放入 SATA、USB、SSD。每一步探测的都是上一步的设备”子节点”，最终形成一棵完整的硬件树，并构建 E820/SMBIOS/ACPI 三套表传递给操作系统。</p></article><hr/><div class="page-footer"></div></div><div class="right sidebar"><div class="graph"><h3>关系图谱</h3><div class="graph-outer"><div class="graph-container" data-cfg="{&quot;drag&quot;:true,&quot;zoom&quot;:true,&quot;depth&quot;:1,&quot;scale&quot;:1.1,&quot;repelForce&quot;:0.5,&quot;centerForce&quot;:0.3,&quot;linkDistance&quot;:30,&quot;fontSize&quot;:0.6,&quot;opacityScale&quot;:1,&quot;showTags&quot;:true,&quot;removeTags&quot;:[],&quot;focusOnHover&quot;:false,&quot;enableRadial&quot;:false}"></div><button class="global-graph-icon" aria-label="Global Graph"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 55 55" fill="currentColor" xml:space="preserve"><path d="M49,0c-3.309,0-6,2.691-6,6c0,1.035,0.263,2.009,0.726,2.86l-9.829,9.829C32.542,17.634,30.846,17,29,17
+                s-3.542,0.634-4.898,1.688l-7.669-7.669C16.785,10.424,17,9.74,17,9c0-2.206-1.794-4-4-4S9,6.794,9,9s1.794,4,4,4
+                c0.74,0,1.424-0.215,2.019-0.567l7.669,7.669C21.634,21.458,21,23.154,21,25s0.634,3.542,1.688,4.897L10.024,42.562
+                C8.958,41.595,7.549,41,6,41c-3.309,0-6,2.691-6,6s2.691,6,6,6s6-2.691,6-6c0-1.035-0.263-2.009-0.726-2.86l12.829-12.829
+                c1.106,0.86,2.44,1.436,3.898,1.619v10.16c-2.833,0.478-5,2.942-5,5.91c0,3.309,2.691,6,6,6s6-2.691,6-6c0-2.967-2.167-5.431-5-5.91
+                v-10.16c1.458-0.183,2.792-0.759,3.898-1.619l7.669,7.669C41.215,39.576,41,40.26,41,41c0,2.206,1.794,4,4,4s4-1.794,4-4
+                s-1.794-4-4-4c-0.74,0-1.424,0.215-2.019,0.567l-7.669-7.669C36.366,28.542,37,26.846,37,25s-0.634-3.542-1.688-4.897l9.665-9.665
+                C46.042,11.405,47.451,12,49,12c3.309,0,6-2.691,6-6S52.309,0,49,0z M11,9c0-1.103,0.897-2,2-2s2,0.897,2,2s-0.897,2-2,2
+                S11,10.103,11,9z M6,51c-2.206,0-4-1.794-4-4s1.794-4,4-4s4,1.794,4,4S8.206,51,6,51z M33,49c0,2.206-1.794,4-4,4s-4-1.794-4-4
+                s1.794-4,4-4S33,46.794,33,49z M29,31c-3.309,0-6-2.691-6-6s2.691-6,6-6s6,2.691,6,6S32.309,31,29,31z M47,41c0,1.103-0.897,2-2,2
+                s-2-0.897-2-2s0.897-2,2-2S47,39.897,47,41z M49,10c-2.206,0-4-1.794-4-4s1.794-4,4-4s4,1.794,4,4S51.206,10,49,10z"></path></svg></button></div><div class="global-graph-outer"><div class="global-graph-container" data-cfg="{&quot;drag&quot;:true,&quot;zoom&quot;:true,&quot;depth&quot;:-1,&quot;scale&quot;:0.9,&quot;repelForce&quot;:0.5,&quot;centerForce&quot;:0.2,&quot;linkDistance&quot;:30,&quot;fontSize&quot;:0.6,&quot;opacityScale&quot;:1,&quot;showTags&quot;:true,&quot;removeTags&quot;:[],&quot;focusOnHover&quot;:true,&quot;enableRadial&quot;:true}"></div></div></div><div class="toc desktop-only"><button type="button" class="toc-header" aria-controls="toc-10" aria-expanded="true"><h3>目录</h3><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="fold"><polyline points="6 9 12 15 18 9"></polyline></svg></button><ul id="list-1" class="toc-content overflow"><li class="depth-0"><a href="#bios-硬件识别与信息获取原理" data-for="bios-硬件识别与信息获取原理">BIOS 硬件识别与信息获取原理</a></li><li class="depth-1"><a href="#1-bios-是什么" data-for="1-bios-是什么">1. BIOS 是什么</a></li><li class="depth-1"><a href="#2-bios-探测的核心理念没有上帝视角" data-for="2-bios-探测的核心理念没有上帝视角">2. BIOS 探测的核心理念：没有”上帝视角”</a></li><li class="depth-1"><a href="#3-bios-整体启动流程" data-for="3-bios-整体启动流程">3. BIOS 整体启动流程</a></li><li class="depth-1"><a href="#4-芯片组探测--平台身份的起点" data-for="4-芯片组探测--平台身份的起点">4. 芯片组探测 — 平台身份的起点</a></li><li class="depth-2"><a href="#41-物理拓扑cpu-与-pch-的互联" data-for="41-物理拓扑cpu-与-pch-的互联">4.1 物理拓扑：CPU 与 PCH 的互联</a></li><li class="depth-2"><a href="#42-芯片组架构演变" data-for="42-芯片组架构演变">4.2 芯片组架构演变</a></li><li class="depth-2"><a href="#43-前置条件cache-as-ram--没有内存时如何读-pci-配置空间" data-for="43-前置条件cache-as-ram--没有内存时如何读-pci-配置空间">4.3 前置条件：Cache-as-RAM — 没有内存时如何读 PCI 配置空间</a></li><li class="depth-2"><a href="#44-host-bridgebdf-000完整寄存器映射" data-for="44-host-bridgebdf-000完整寄存器映射">4.4 Host Bridge（BDF 0:0:0）完整寄存器映射</a></li><li class="depth-2"><a href="#45-dmi--opi-链路初探" data-for="45-dmi--opi-链路初探">4.5 DMI / OPI 链路初探</a></li><li class="depth-2"><a href="#46-pchlpc-bridge--isa-bridge--南桥的-pci-代理" data-for="46-pchlpc-bridge--isa-bridge--南桥的-pci-代理">4.6 PCH（LPC Bridge / ISA Bridge） — 南桥的 PCI 代理</a></li><li class="depth-2"><a href="#47-pch-内部关键功能模块的探测" data-for="47-pch-内部关键功能模块的探测">4.7 PCH 内部关键功能模块的探测</a></li><li class="depth-2"><a href="#48-amd-平台差异" data-for="48-amd-平台差异">4.8 AMD 平台差异</a></li><li class="depth-2"><a href="#49-探测完成后的全局数据" data-for="49-探测完成后的全局数据">4.9 探测完成后的全局数据</a></li><li class="depth-1"><a href="#5-cpu-自身识别" data-for="5-cpu-自身识别">5. CPU 自身识别</a></li><li class="depth-2"><a href="#51-cpuid--不依赖-pci-总线的自省" data-for="51-cpuid--不依赖-pci-总线的自省">5.1 CPUID — 不依赖 PCI 总线的自省</a></li><li class="depth-2"><a href="#52-cpu-型号识别" data-for="52-cpu-型号识别">5.2 CPU 型号识别</a></li><li class="depth-2"><a href="#53-cpu-拓扑探测" data-for="53-cpu-拓扑探测">5.3 CPU 拓扑探测</a></li><li class="depth-2"><a href="#54-msr-寄存器--不在-cpuid-中的信息" data-for="54-msr-寄存器--不在-cpuid-中的信息">5.4 MSR 寄存器 — 不在 CPUID 中的信息</a></li><li class="depth-1"><a href="#6-内存探测smbus--spd--时序训练" data-for="6-内存探测smbus--spd--时序训练">6. 内存探测：SMBus + SPD + 时序训练</a></li><li class="depth-2"><a href="#61-ddr-内存架构简介" data-for="61-ddr-内存架构简介">6.1 DDR 内存架构简介</a></li><li class="depth-2"><a href="#62-smbus-探测-spd" data-for="62-smbus-探测-spd">6.2 SMBus 探测 SPD</a></li><li class="depth-2"><a href="#63-内存控制器初始化memory-training" data-for="63-内存控制器初始化memory-training">6.3 内存控制器初始化：Memory Training</a></li><li class="depth-1"><a href="#7-pcipcie-总线--最大规模的探测" data-for="7-pcipcie-总线--最大规模的探测">7. PCI/PCIe 总线 — 最大规模的探测</a></li><li class="depth-2"><a href="#71-总线拓扑模型" data-for="71-总线拓扑模型">7.1 总线拓扑模型</a></li><li class="depth-2"><a href="#72-pci-配置空间--设备身份的身份证" data-for="72-pci-配置空间--设备身份的身份证">7.2 PCI 配置空间 — 设备身份的”身份证”</a></li><li class="depth-2"><a href="#73-config_address--config_data--传统-pci-访问机制" data-for="73-config_address--config_data--传统-pci-访问机制">7.3 CONFIG_ADDRESS / CONFIG_DATA — 传统 PCI 访问机制</a></li><li class="depth-2"><a href="#74-ecam-mmio-enhanced-configuration-access" data-for="74-ecam-mmio-enhanced-configuration-access">7.4 ECAM (MMIO Enhanced Configuration Access)</a></li><li class="depth-2"><a href="#75-枚举算法及完整事件序列" data-for="75-枚举算法及完整事件序列">7.5 枚举算法及完整事件序列</a></li><li class="depth-2"><a href="#76-bar-大小探测与地址分配" data-for="76-bar-大小探测与地址分配">7.6 BAR 大小探测与地址分配</a></li><li class="depth-1"><a href="#8-传统-io-设备--固定地址的隐式探测" data-for="8-传统-io-设备--固定地址的隐式探测">8. 传统 I/O 设备 — 固定地址的”隐式探测”</a></li><li class="depth-2"><a href="#81-8259-pic-可编程中断控制器" data-for="81-8259-pic-可编程中断控制器">8.1 8259 PIC (可编程中断控制器)</a></li><li class="depth-2"><a href="#82-8254-pit-可编程间隔定时器" data-for="82-8254-pit-可编程间隔定时器">8.2 8254 PIT (可编程间隔定时器)</a></li><li class="depth-2"><a href="#83-rtccmos-实时钟" data-for="83-rtccmos-实时钟">8.3 RTC/CMOS (实时钟)</a></li><li class="depth-2"><a href="#84-8042-键盘控制器-kbc" data-for="84-8042-键盘控制器-kbc">8.4 8042 键盘控制器 (KBC)</a></li><li class="depth-2"><a href="#85-super-io-芯片与-lpc-总线" data-for="85-super-io-芯片与-lpc-总线">8.5 Super I/O 芯片与 LPC 总线</a></li><li class="depth-1"><a href="#9-存储设备探测" data-for="9-存储设备探测">9. 存储设备探测</a></li><li class="depth-2"><a href="#91-sata-ahci-控制器与设备识别" data-for="91-sata-ahci-控制器与设备识别">9.1 SATA AHCI 控制器与设备识别</a></li><li class="depth-2"><a href="#92-nvme-控制器与设备识别" data-for="92-nvme-控制器与设备识别">9.2 NVMe 控制器与设备识别</a></li><li class="depth-1"><a href="#10-usb-控制器发现与设备枚举" data-for="10-usb-控制器发现与设备枚举">10. USB 控制器发现与设备枚举</a></li><li class="depth-2"><a href="#101-四种-usb-控制器类型" data-for="101-四种-usb-控制器类型">10.1 四种 USB 控制器类型</a></li><li class="depth-2"><a href="#102-xhci-端口探测与地址分配" data-for="102-xhci-端口探测与地址分配">10.2 xHCI 端口探测与地址分配</a></li><li class="depth-1"><a href="#11-平台固件表--bios-给操作系统的接口" data-for="11-平台固件表--bios-给操作系统的接口">11. 平台固件表 — BIOS 给操作系统的”接口”</a></li><li class="depth-2"><a href="#111-e820--物理内存布局" data-for="111-e820--物理内存布局">11.1 E820 — 物理内存布局</a></li><li class="depth-2"><a href="#112-smbios--硬件资产清单" data-for="112-smbios--硬件资产清单">11.2 SMBIOS — 硬件资产清单</a></li><li class="depth-2"><a href="#113-acpi--设备树与电源管理" data-for="113-acpi--设备树与电源管理">11.3 ACPI — 设备树与电源管理</a></li><li class="depth-1"><a href="#12-bios-探测架构全景图" data-for="12-bios-探测架构全景图">12. BIOS 探测架构全景图</a></li><li class="depth-1"><a href="#13-总结每种硬件的探测手段输出格式与-linux-获取方式" data-for="13-总结每种硬件的探测手段输出格式与-linux-获取方式">13. 总结：每种硬件的探测手段、输出格式与 Linux 获取方式</a></li><li class="overflow-end"></li></ul></div></div><footer class><p>Created with <a href="https://quartz.jzhao.xyz/">Quartz v4.5.2</a> © 2026</p><ul><li><a href="https://github.com/jackyzha0/quartz">GitHub</a></li><li><a href="https://discord.gg/cRFFHYye7t">Discord Community</a></li></ul></footer></div></div></body><script type="application/javascript" data-persist="true">function n(){let t=this.parentElement;t.classList.toggle("is-collapsed");let e=t.getElementsByClassName("callout-content")[0];if(!e)return;let l=t.classList.contains("is-collapsed");e.style.gridTemplateRows=l?"0fr":"1fr"}function c(){let t=document.getElementsByClassName("callout is-collapsible");for(let e of t){let l=e.getElementsByClassName("callout-title")[0],s=e.getElementsByClassName("callout-content")[0];if(!l||!s)continue;l.addEventListener("click",n),window.addCleanup(()=>l.removeEventListener("click",n));let o=e.classList.contains("is-collapsed");s.style.gridTemplateRows=o?"0fr":"1fr"}}document.addEventListener("nav",c);
+</script><script type="module" data-persist="true">function E(a,e){if(!a)return;function t(o){o.target===this&&(o.preventDefault(),o.stopPropagation(),e())}function n(o){o.key.startsWith("Esc")&&(o.preventDefault(),e())}a?.addEventListener("click",t),window.addCleanup(()=>a?.removeEventListener("click",t)),document.addEventListener("keydown",n),window.addCleanup(()=>document.removeEventListener("keydown",n))}function f(a){for(;a.firstChild;)a.removeChild(a.firstChild)}var m=class{constructor(e,t){this.container=e;this.content=t;this.setupEventListeners(),this.setupNavigationControls(),this.resetTransform()}isDragging=!1;startPan={x:0,y:0};currentPan={x:0,y:0};scale=1;MIN_SCALE=.5;MAX_SCALE=3;cleanups=[];setupEventListeners(){let e=this.onMouseDown.bind(this),t=this.onMouseMove.bind(this),n=this.onMouseUp.bind(this),o=this.onTouchStart.bind(this),r=this.onTouchMove.bind(this),i=this.onTouchEnd.bind(this),s=this.resetTransform.bind(this);this.container.addEventListener("mousedown",e),document.addEventListener("mousemove",t),document.addEventListener("mouseup",n),this.container.addEventListener("touchstart",o,{passive:!1}),document.addEventListener("touchmove",r,{passive:!1}),document.addEventListener("touchend",i),window.addEventListener("resize",s),this.cleanups.push(()=>this.container.removeEventListener("mousedown",e),()=>document.removeEventListener("mousemove",t),()=>document.removeEventListener("mouseup",n),()=>this.container.removeEventListener("touchstart",o),()=>document.removeEventListener("touchmove",r),()=>document.removeEventListener("touchend",i),()=>window.removeEventListener("resize",s))}cleanup(){for(let e of this.cleanups)e()}setupNavigationControls(){let e=document.createElement("div");e.className="mermaid-controls";let t=this.createButton("+",()=>this.zoom(.1)),n=this.createButton("-",()=>this.zoom(-.1)),o=this.createButton("Reset",()=>this.resetTransform());e.appendChild(n),e.appendChild(o),e.appendChild(t),this.container.appendChild(e)}createButton(e,t){let n=document.createElement("button");return n.textContent=e,n.className="mermaid-control-button",n.addEventListener("click",t),window.addCleanup(()=>n.removeEventListener("click",t)),n}onMouseDown(e){e.button===0&&(this.isDragging=!0,this.startPan={x:e.clientX-this.currentPan.x,y:e.clientY-this.currentPan.y},this.container.style.cursor="grabbing")}onMouseMove(e){this.isDragging&&(e.preventDefault(),this.currentPan={x:e.clientX-this.startPan.x,y:e.clientY-this.startPan.y},this.updateTransform())}onMouseUp(){this.isDragging=!1,this.container.style.cursor="grab"}onTouchStart(e){if(e.touches.length!==1)return;this.isDragging=!0;let t=e.touches[0];this.startPan={x:t.clientX-this.currentPan.x,y:t.clientY-this.currentPan.y}}onTouchMove(e){if(!this.isDragging||e.touches.length!==1)return;e.preventDefault();let t=e.touches[0];this.currentPan={x:t.clientX-this.startPan.x,y:t.clientY-this.startPan.y},this.updateTransform()}onTouchEnd(){this.isDragging=!1}zoom(e){let t=Math.min(Math.max(this.scale+e,this.MIN_SCALE),this.MAX_SCALE),n=this.content.getBoundingClientRect(),o=n.width/2,r=n.height/2,i=t-this.scale;this.currentPan.x-=o*i,this.currentPan.y-=r*i,this.scale=t,this.updateTransform()}updateTransform(){this.content.style.transform=`translate(${this.currentPan.x}px, ${this.currentPan.y}px) scale(${this.scale})`}resetTransform(){let t=this.content.querySelector("svg").getBoundingClientRect(),n=t.width/this.scale,o=t.height/this.scale;this.scale=1,this.currentPan={x:(this.container.clientWidth-n)/2,y:(this.container.clientHeight-o)/2},this.updateTransform()}},T=["--secondary","--tertiary","--gray","--light","--lightgray","--highlight","--dark","--darkgray","--codeFont"],y;document.addEventListener("nav",async()=>{let e=document.querySelector(".center").querySelectorAll("code.mermaid");if(e.length===0)return;y||=await import("https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.4.0/mermaid.esm.min.mjs");let t=y.default,n=new WeakMap;for(let r of e)n.set(r,r.innerText);async function o(){for(let s of e){s.removeAttribute("data-processed");let c=n.get(s);c&&(s.innerHTML=c)}let r=T.reduce((s,c)=>(s[c]=window.getComputedStyle(document.documentElement).getPropertyValue(c),s),{}),i=document.documentElement.getAttribute("saved-theme")==="dark";t.initialize({startOnLoad:!1,securityLevel:"loose",theme:i?"dark":"base",themeVariables:{fontFamily:r["--codeFont"],primaryColor:r["--light"],primaryTextColor:r["--darkgray"],primaryBorderColor:r["--tertiary"],lineColor:r["--darkgray"],secondaryColor:r["--secondary"],tertiaryColor:r["--tertiary"],clusterBkg:r["--light"],edgeLabelBackground:r["--highlight"]}}),await t.run({nodes:e})}await o(),document.addEventListener("themechange",o),window.addCleanup(()=>document.removeEventListener("themechange",o));for(let r=0;r<e.length;r++){let v=function(){let g=l.querySelector("#mermaid-space"),h=l.querySelector(".mermaid-content");if(!h)return;f(h);let w=i.querySelector("svg").cloneNode(!0);h.appendChild(w),l.classList.add("active"),g.style.cursor="grab",u=new m(g,h)},M=function(){l.classList.remove("active"),u?.cleanup(),u=null},i=e[r],s=i.parentElement,c=s.querySelector(".clipboard-button"),d=s.querySelector(".expand-button"),p=window.getComputedStyle(c),L=c.offsetWidth+parseFloat(p.marginLeft||"0")+parseFloat(p.marginRight||"0");d.style.right=`calc(${L}px + 0.3rem)`,s.prepend(d);let l=s.querySelector("#mermaid-container");if(!l)return;let u=null;d.addEventListener("click",v),E(l,M),window.addCleanup(()=>{u?.cleanup(),d.removeEventListener("click",v)})}});
+</script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/copy-tex.min.js" type="application/javascript" data-persist="true"></script><script src="../postscript.js" type="module" data-persist="true"></script></html>

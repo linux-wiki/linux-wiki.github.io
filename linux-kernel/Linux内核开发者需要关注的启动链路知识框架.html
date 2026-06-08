@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr"><head><title>Linux内核开发者需要关注的启动链路知识框架</title><meta charset="utf-8"/><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com"/><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted Grotesk:wght@400;700&amp;family=Source Sans Pro:ital,wght@0,400;0,600;1,400;1,600&amp;family=IBM Plex Mono:wght@400;600&amp;display=swap"/><link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin="anonymous"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="og:site_name" content="Linux Wiki"/><meta property="og:title" content="Linux内核开发者需要关注的启动链路知识框架"/><meta property="og:type" content="website"/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:title" content="Linux内核开发者需要关注的启动链路知识框架"/><meta name="twitter:description" content="Linux 内核开发者需要关注的启动链路知识框架 关联阅读：从上电到BIOS加载操作系统内核 目标：从 Linux 内核开发者视角，提炼“从上电到 BIOS/UEFI 加载操作系统内核”这条链路里真正需要掌握的知识点，并把它们串成一个适合初学者的知识框架。 目录 0."/><meta property="og:description" content="Linux 内核开发者需要关注的启动链路知识框架 关联阅读：从上电到BIOS加载操作系统内核 目标：从 Linux 内核开发者视角，提炼“从上电到 BIOS/UEFI 加载操作系统内核”这条链路里真正需要掌握的知识点，并把它们串成一个适合初学者的知识框架。 目录 0."/><meta property="og:image:alt" content="Linux 内核开发者需要关注的启动链路知识框架 关联阅读：从上电到BIOS加载操作系统内核 目标：从 Linux 内核开发者视角，提炼“从上电到 BIOS/UEFI 加载操作系统内核”这条链路里真正需要掌握的知识点，并把它们串成一个适合初学者的知识框架。 目录 0."/><meta property="twitter:domain" content="quartz.jzhao.xyz"/><meta property="og:url" content="https://quartz.jzhao.xyz/linux-kernel/Linux内核开发者需要关注的启动链路知识框架"/><meta property="twitter:url" content="https://quartz.jzhao.xyz/linux-kernel/Linux内核开发者需要关注的启动链路知识框架"/><link rel="icon" href="../static/icon.png"/><meta name="description" content="Linux 内核开发者需要关注的启动链路知识框架 关联阅读：从上电到BIOS加载操作系统内核 目标：从 Linux 内核开发者视角，提炼“从上电到 BIOS/UEFI 加载操作系统内核”这条链路里真正需要掌握的知识点，并把它们串成一个适合初学者的知识框架。 目录 0."/><meta name="generator" content="Quartz"/><link href="../index.css" rel="stylesheet" type="text/css" data-persist="true"/><style>.expand-button {
+  position: absolute;
+  display: flex;
+  float: right;
+  padding: 0.4rem;
+  margin: 0.3rem;
+  right: 0;
+  color: var(--gray);
+  border-color: var(--dark);
+  background-color: var(--light);
+  border: 1px solid;
+  border-radius: 5px;
+  opacity: 0;
+  transition: 0.2s;
+}
+.expand-button > svg {
+  fill: var(--light);
+  filter: contrast(0.3);
+}
+.expand-button:hover {
+  cursor: pointer;
+  border-color: var(--secondary);
+}
+.expand-button:focus {
+  outline: 0;
+}
+
+pre:hover > .expand-button {
+  opacity: 1;
+  transition: 0.2s;
+}
+
+#mermaid-container {
+  position: fixed;
+  contain: layout;
+  z-index: 999;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: none;
+  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.5);
+}
+#mermaid-container.active {
+  display: inline-block;
+}
+#mermaid-container > #mermaid-space {
+  border: 1px solid var(--lightgray);
+  background-color: var(--light);
+  border-radius: 5px;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  height: 80vh;
+  width: 80vw;
+  overflow: hidden;
+}
+#mermaid-container > #mermaid-space > .mermaid-content {
+  position: relative;
+  transform-origin: 0 0;
+  transition: transform 0.1s ease;
+  overflow: visible;
+  min-height: 200px;
+  min-width: 200px;
+}
+#mermaid-container > #mermaid-space > .mermaid-content pre {
+  margin: 0;
+  border: none;
+}
+#mermaid-container > #mermaid-space > .mermaid-content svg {
+  max-width: none;
+  height: auto;
+}
+#mermaid-container > #mermaid-space > .mermaid-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  background: var(--light);
+  border: 1px solid var(--lightgray);
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 2;
+}
+#mermaid-container > #mermaid-space > .mermaid-controls .mermaid-control-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--lightgray);
+  background: var(--light);
+  color: var(--dark);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-family: var(--bodyFont);
+  transition: all 0.2s ease;
+}
+#mermaid-container > #mermaid-space > .mermaid-controls .mermaid-control-button:hover {
+  background: var(--lightgray);
+}
+#mermaid-container > #mermaid-space > .mermaid-controls .mermaid-control-button:active {
+  transform: translateY(1px);
+}
+#mermaid-container > #mermaid-space > .mermaid-controls .mermaid-control-button:nth-child(2) {
+  width: auto;
+  padding: 0 12px;
+  font-size: 14px;
+}
+/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VSb290IjoiL2RhdGEvd2lraS9teS13aWtpL3F1YXJ0ei9jb21wb25lbnRzL3N0eWxlcyIsInNvdXJjZXMiOlsibWVybWFpZC5pbmxpbmUuc2NzcyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUFBQTtFQUNFO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBOztBQUVBO0VBQ0U7RUFDQTs7QUFHRjtFQUNFO0VBQ0E7O0FBR0Y7RUFDRTs7O0FBS0Y7RUFDRTtFQUNBOzs7QUFJSjtFQUNFO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7O0FBRUE7RUFDRTs7QUFHRjtFQUNFO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBOztBQUVBO0VBQ0U7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBOztBQUVBO0VBQ0U7RUFDQTs7QUFHRjtFQUNFO0VBQ0E7O0FBSUo7RUFDRTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBOztBQUVBO0VBQ0U7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTtFQUNBO0VBQ0E7RUFDQTs7QUFFQTtFQUNFOztBQUdGO0VBQ0U7O0FBSUY7RUFDRTtFQUNBO0VBQ0EiLCJzb3VyY2VzQ29udGVudCI6WyIuZXhwYW5kLWJ1dHRvbiB7XG4gIHBvc2l0aW9uOiBhYnNvbHV0ZTtcbiAgZGlzcGxheTogZmxleDtcbiAgZmxvYXQ6IHJpZ2h0O1xuICBwYWRkaW5nOiAwLjRyZW07XG4gIG1hcmdpbjogMC4zcmVtO1xuICByaWdodDogMDsgLy8gTk9URTogcmlnaHQgd2lsbCBiZSBzZXQgaW4gbWVybWFpZC5pbmxpbmUudHNcbiAgY29sb3I6IHZhcigtLWdyYXkpO1xuICBib3JkZXItY29sb3I6IHZhcigtLWRhcmspO1xuICBiYWNrZ3JvdW5kLWNvbG9yOiB2YXIoLS1saWdodCk7XG4gIGJvcmRlcjogMXB4IHNvbGlkO1xuICBib3JkZXItcmFkaXVzOiA1cHg7XG4gIG9wYWNpdHk6IDA7XG4gIHRyYW5zaXRpb246IDAuMnM7XG5cbiAgJiA+IHN2ZyB7XG4gICAgZmlsbDogdmFyKC0tbGlnaHQpO1xuICAgIGZpbHRlcjogY29udHJhc3QoMC4zKTtcbiAgfVxuXG4gICY6aG92ZXIge1xuICAgIGN1cnNvcjogcG9pbnRlcjtcbiAgICBib3JkZXItY29sb3I6IHZhcigtLXNlY29uZGFyeSk7XG4gIH1cblxuICAmOmZvY3VzIHtcbiAgICBvdXRsaW5lOiAwO1xuICB9XG59XG5cbnByZSB7XG4gICY6aG92ZXIgPiAuZXhwYW5kLWJ1dHRvbiB7XG4gICAgb3BhY2l0eTogMTtcbiAgICB0cmFuc2l0aW9uOiAwLjJzO1xuICB9XG59XG5cbiNtZXJtYWlkLWNvbnRhaW5lciB7XG4gIHBvc2l0aW9uOiBmaXhlZDtcbiAgY29udGFpbjogbGF5b3V0O1xuICB6LWluZGV4OiA5OTk7XG4gIGxlZnQ6IDA7XG4gIHRvcDogMDtcbiAgd2lkdGg6IDEwMHZ3O1xuICBoZWlnaHQ6IDEwMHZoO1xuICBvdmVyZmxvdzogaGlkZGVuO1xuICBkaXNwbGF5OiBub25lO1xuICBiYWNrZHJvcC1maWx0ZXI6IGJsdXIoNHB4KTtcbiAgYmFja2dyb3VuZDogcmdiYSgwLCAwLCAwLCAwLjUpO1xuXG4gICYuYWN0aXZlIHtcbiAgICBkaXNwbGF5OiBpbmxpbmUtYmxvY2s7XG4gIH1cblxuICAmID4gI21lcm1haWQtc3BhY2Uge1xuICAgIGJvcmRlcjogMXB4IHNvbGlkIHZhcigtLWxpZ2h0Z3JheSk7XG4gICAgYmFja2dyb3VuZC1jb2xvcjogdmFyKC0tbGlnaHQpO1xuICAgIGJvcmRlci1yYWRpdXM6IDVweDtcbiAgICBwb3NpdGlvbjogZml4ZWQ7XG4gICAgdG9wOiA1MCU7XG4gICAgbGVmdDogNTAlO1xuICAgIHRyYW5zZm9ybTogdHJhbnNsYXRlKC01MCUsIC01MCUpO1xuICAgIGhlaWdodDogODB2aDtcbiAgICB3aWR0aDogODB2dztcbiAgICBvdmVyZmxvdzogaGlkZGVuO1xuXG4gICAgJiA+IC5tZXJtYWlkLWNvbnRlbnQge1xuICAgICAgcG9zaXRpb246IHJlbGF0aXZlO1xuICAgICAgdHJhbnNmb3JtLW9yaWdpbjogMCAwO1xuICAgICAgdHJhbnNpdGlvbjogdHJhbnNmb3JtIDAuMXMgZWFzZTtcbiAgICAgIG92ZXJmbG93OiB2aXNpYmxlO1xuICAgICAgbWluLWhlaWdodDogMjAwcHg7XG4gICAgICBtaW4td2lkdGg6IDIwMHB4O1xuXG4gICAgICBwcmUge1xuICAgICAgICBtYXJnaW46IDA7XG4gICAgICAgIGJvcmRlcjogbm9uZTtcbiAgICAgIH1cblxuICAgICAgc3ZnIHtcbiAgICAgICAgbWF4LXdpZHRoOiBub25lO1xuICAgICAgICBoZWlnaHQ6IGF1dG87XG4gICAgICB9XG4gICAgfVxuXG4gICAgJiA+IC5tZXJtYWlkLWNvbnRyb2xzIHtcbiAgICAgIHBvc2l0aW9uOiBhYnNvbHV0ZTtcbiAgICAgIGJvdHRvbTogMjBweDtcbiAgICAgIHJpZ2h0OiAyMHB4O1xuICAgICAgZGlzcGxheTogZmxleDtcbiAgICAgIGdhcDogOHB4O1xuICAgICAgcGFkZGluZzogOHB4O1xuICAgICAgYmFja2dyb3VuZDogdmFyKC0tbGlnaHQpO1xuICAgICAgYm9yZGVyOiAxcHggc29saWQgdmFyKC0tbGlnaHRncmF5KTtcbiAgICAgIGJvcmRlci1yYWRpdXM6IDZweDtcbiAgICAgIGJveC1zaGFkb3c6IDAgMnB4IDRweCByZ2JhKDAsIDAsIDAsIDAuMSk7XG4gICAgICB6LWluZGV4OiAyO1xuXG4gICAgICAubWVybWFpZC1jb250cm9sLWJ1dHRvbiB7XG4gICAgICAgIGRpc3BsYXk6IGZsZXg7XG4gICAgICAgIGFsaWduLWl0ZW1zOiBjZW50ZXI7XG4gICAgICAgIGp1c3RpZnktY29udGVudDogY2VudGVyO1xuICAgICAgICB3aWR0aDogMzJweDtcbiAgICAgICAgaGVpZ2h0OiAzMnB4O1xuICAgICAgICBwYWRkaW5nOiAwO1xuICAgICAgICBib3JkZXI6IDFweCBzb2xpZCB2YXIoLS1saWdodGdyYXkpO1xuICAgICAgICBiYWNrZ3JvdW5kOiB2YXIoLS1saWdodCk7XG4gICAgICAgIGNvbG9yOiB2YXIoLS1kYXJrKTtcbiAgICAgICAgYm9yZGVyLXJhZGl1czogNHB4O1xuICAgICAgICBjdXJzb3I6IHBvaW50ZXI7XG4gICAgICAgIGZvbnQtc2l6ZTogMTZweDtcbiAgICAgICAgZm9udC1mYW1pbHk6IHZhcigtLWJvZHlGb250KTtcbiAgICAgICAgdHJhbnNpdGlvbjogYWxsIDAuMnMgZWFzZTtcblxuICAgICAgICAmOmhvdmVyIHtcbiAgICAgICAgICBiYWNrZ3JvdW5kOiB2YXIoLS1saWdodGdyYXkpO1xuICAgICAgICB9XG5cbiAgICAgICAgJjphY3RpdmUge1xuICAgICAgICAgIHRyYW5zZm9ybTogdHJhbnNsYXRlWSgxcHgpO1xuICAgICAgICB9XG5cbiAgICAgICAgLy8gU3R5bGUgdGhlIHJlc2V0IGJ1dHRvbiBkaWZmZXJlbnRseVxuICAgICAgICAmOm50aC1jaGlsZCgyKSB7XG4gICAgICAgICAgd2lkdGg6IGF1dG87XG4gICAgICAgICAgcGFkZGluZzogMCAxMnB4O1xuICAgICAgICAgIGZvbnQtc2l6ZTogMTRweDtcbiAgICAgICAgfVxuICAgICAgfVxuICAgIH1cbiAgfVxufVxuIl19 */</style><link href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" rel="stylesheet" type="text/css" data-persist="true"/><script src="../prescript.js" type="application/javascript" data-persist="true"></script><script type="application/javascript" data-persist="true">const fetchData = fetch("../static/contentIndex.json").then(data => data.json())</script><link rel="alternate" type="application/rss+xml" title="RSS Feed" href="https://quartz.jzhao.xyz/index.xml"/><meta property="og:image:width" content="1200"/><meta property="og:image:height" content="630"/><meta property="og:image" content="https://quartz.jzhao.xyz/linux-kernel/Linux内核开发者需要关注的启动链路知识框架-og-image.webp"/><meta property="og:image:url" content="https://quartz.jzhao.xyz/linux-kernel/Linux内核开发者需要关注的启动链路知识框架-og-image.webp"/><meta name="twitter:image" content="https://quartz.jzhao.xyz/linux-kernel/Linux内核开发者需要关注的启动链路知识框架-og-image.webp"/><meta property="og:image:type" content="image/.webp"/></head><body data-slug="linux-kernel/Linux内核开发者需要关注的启动链路知识框架"><div id="quartz-root" class="page"><div id="quartz-body"><div class="left sidebar"><h2 class="page-title"><a href="..">Linux Wiki</a></h2><div class="spacer mobile-only"></div><div class="flex-component" style="flex-direction: row; flex-wrap: nowrap; gap: 1rem;"><div style="flex-grow: 1; flex-shrink: 1; flex-basis: auto; order: 0; align-self: center; justify-self: center;"><div class="search"><button class="search-button"><svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 19.9 19.7"><title>Search</title><g class="search-path" fill="none"><path stroke-linecap="square" d="M18.5 18.3l-5.4-5.4"></path><circle cx="8" cy="8" r="7"></circle></g></svg><p>搜索</p></button><div class="search-container"><div class="search-space"><input autocomplete="off" class="search-bar" name="search" type="text" aria-label="搜索些什么" placeholder="搜索些什么"/><div class="search-layout" data-preview="true"></div></div></div></div></div><div style="flex-grow: 0; flex-shrink: 1; flex-basis: auto; order: 0; align-self: center; justify-self: center;"><button class="darkmode"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" class="dayIcon" x="0px" y="0px" viewBox="0 0 35 35" style="enable-background:new 0 0 35 35" xml:space="preserve" aria-label="暗色模式"><title>暗色模式</title><path d="M6,17.5C6,16.672,5.328,16,4.5,16h-3C0.672,16,0,16.672,0,17.5    S0.672,19,1.5,19h3C5.328,19,6,18.328,6,17.5z M7.5,26c-0.414,0-0.789,0.168-1.061,0.439l-2,2C4.168,28.711,4,29.086,4,29.5    C4,30.328,4.671,31,5.5,31c0.414,0,0.789-0.168,1.06-0.44l2-2C8.832,28.289,9,27.914,9,27.5C9,26.672,8.329,26,7.5,26z M17.5,6    C18.329,6,19,5.328,19,4.5v-3C19,0.672,18.329,0,17.5,0S16,0.672,16,1.5v3C16,5.328,16.671,6,17.5,6z M27.5,9    c0.414,0,0.789-0.168,1.06-0.439l2-2C30.832,6.289,31,5.914,31,5.5C31,4.672,30.329,4,29.5,4c-0.414,0-0.789,0.168-1.061,0.44    l-2,2C26.168,6.711,26,7.086,26,7.5C26,8.328,26.671,9,27.5,9z M6.439,8.561C6.711,8.832,7.086,9,7.5,9C8.328,9,9,8.328,9,7.5    c0-0.414-0.168-0.789-0.439-1.061l-2-2C6.289,4.168,5.914,4,5.5,4C4.672,4,4,4.672,4,5.5c0,0.414,0.168,0.789,0.439,1.06    L6.439,8.561z M33.5,16h-3c-0.828,0-1.5,0.672-1.5,1.5s0.672,1.5,1.5,1.5h3c0.828,0,1.5-0.672,1.5-1.5S34.328,16,33.5,16z     M28.561,26.439C28.289,26.168,27.914,26,27.5,26c-0.828,0-1.5,0.672-1.5,1.5c0,0.414,0.168,0.789,0.439,1.06l2,2    C28.711,30.832,29.086,31,29.5,31c0.828,0,1.5-0.672,1.5-1.5c0-0.414-0.168-0.789-0.439-1.061L28.561,26.439z M17.5,29    c-0.829,0-1.5,0.672-1.5,1.5v3c0,0.828,0.671,1.5,1.5,1.5s1.5-0.672,1.5-1.5v-3C19,29.672,18.329,29,17.5,29z M17.5,7    C11.71,7,7,11.71,7,17.5S11.71,28,17.5,28S28,23.29,28,17.5S23.29,7,17.5,7z M17.5,25c-4.136,0-7.5-3.364-7.5-7.5    c0-4.136,3.364-7.5,7.5-7.5c4.136,0,7.5,3.364,7.5,7.5C25,21.636,21.636,25,17.5,25z"></path></svg><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" class="nightIcon" x="0px" y="0px" viewBox="0 0 100 100" style="enable-background:new 0 0 100 100" xml:space="preserve" aria-label="亮色模式"><title>亮色模式</title><path d="M96.76,66.458c-0.853-0.852-2.15-1.064-3.23-0.534c-6.063,2.991-12.858,4.571-19.655,4.571  C62.022,70.495,50.88,65.88,42.5,57.5C29.043,44.043,25.658,23.536,34.076,6.47c0.532-1.08,0.318-2.379-0.534-3.23  c-0.851-0.852-2.15-1.064-3.23-0.534c-4.918,2.427-9.375,5.619-13.246,9.491c-9.447,9.447-14.65,22.008-14.65,35.369  c0,13.36,5.203,25.921,14.65,35.368s22.008,14.65,35.368,14.65c13.361,0,25.921-5.203,35.369-14.65  c3.872-3.871,7.064-8.328,9.491-13.246C97.826,68.608,97.611,67.309,96.76,66.458z"></path></svg></button></div><div style="flex-grow: 0; flex-shrink: 1; flex-basis: auto; order: 0; align-self: center; justify-self: center;"><button class="readermode"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" class="readerIcon" fill="currentColor" stroke="currentColor" stroke-width="0.2" stroke-linecap="round" stroke-linejoin="round" width="64px" height="64px" viewBox="0 0 24 24" aria-label="阅读模式"><title>阅读模式</title><g transform="translate(-1.8, -1.8) scale(1.15, 1.2)"><path d="M8.9891247,2.5 C10.1384702,2.5 11.2209868,2.96705384 12.0049645,3.76669482 C12.7883914,2.96705384 13.8709081,2.5 15.0202536,2.5 L18.7549359,2.5 C19.1691495,2.5 19.5049359,2.83578644 19.5049359,3.25 L19.5046891,4.004 L21.2546891,4.00457396 C21.6343849,4.00457396 21.9481801,4.28672784 21.9978425,4.6528034 L22.0046891,4.75457396 L22.0046891,20.25 C22.0046891,20.6296958 21.7225353,20.943491 21.3564597,20.9931534 L21.2546891,21 L2.75468914,21 C2.37499337,21 2.06119817,20.7178461 2.01153575,20.3517706 L2.00468914,20.25 L2.00468914,4.75457396 C2.00468914,4.37487819 2.28684302,4.061083 2.65291858,4.01142057 L2.75468914,4.00457396 L4.50368914,4.004 L4.50444233,3.25 C4.50444233,2.87030423 4.78659621,2.55650904 5.15267177,2.50684662 L5.25444233,2.5 L8.9891247,2.5 Z M4.50368914,5.504 L3.50468914,5.504 L3.50468914,19.5 L10.9478955,19.4998273 C10.4513189,18.9207296 9.73864328,18.5588115 8.96709342,18.5065584 L8.77307039,18.5 L5.25444233,18.5 C4.87474657,18.5 4.56095137,18.2178461 4.51128895,17.8517706 L4.50444233,17.75 L4.50368914,5.504 Z M19.5049359,17.75 C19.5049359,18.1642136 19.1691495,18.5 18.7549359,18.5 L15.2363079,18.5 C14.3910149,18.5 13.5994408,18.8724714 13.0614828,19.4998273 L20.5046891,19.5 L20.5046891,5.504 L19.5046891,5.504 L19.5049359,17.75 Z M18.0059359,3.999 L15.0202536,4 L14.8259077,4.00692283 C13.9889509,4.06666544 13.2254227,4.50975805 12.7549359,5.212 L12.7549359,17.777 L12.7782651,17.7601316 C13.4923805,17.2719483 14.3447024,17 15.2363079,17 L18.0059359,16.999 L18.0056891,4.798 L18.0033792,4.75457396 L18.0056891,4.71 L18.0059359,3.999 Z M8.9891247,4 L6.00368914,3.999 L6.00599909,4.75457396 L6.00599909,4.75457396 L6.00368914,4.783 L6.00368914,16.999 L8.77307039,17 C9.57551536,17 10.3461406,17.2202781 11.0128313,17.6202194 L11.2536891,17.776 L11.2536891,5.211 C10.8200889,4.56369974 10.1361548,4.13636104 9.37521067,4.02745763 L9.18347055,4.00692283 L8.9891247,4 Z"></path></g></svg></button></div></div><div class="explorer" data-behavior="link" data-collapsed="collapsed" data-savestate="true" data-data-fns="{&quot;order&quot;:[&quot;filter&quot;,&quot;map&quot;,&quot;sort&quot;],&quot;sortFn&quot;:&quot;(a,b)=>!a.isFolder&amp;&amp;!b.isFolder||a.isFolder&amp;&amp;b.isFolder?a.displayName.localeCompare(b.displayName,void 0,{numeric:!0,sensitivity:\&quot;base\&quot;}):!a.isFolder&amp;&amp;b.isFolder?1:-1&quot;,&quot;filterFn&quot;:&quot;node=>node.slugSegment!==\&quot;tags\&quot;&quot;,&quot;mapFn&quot;:&quot;node=>node&quot;}"><button type="button" class="explorer-toggle mobile-explorer hide-until-loaded" data-mobile="true" aria-controls="explorer-11"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide-menu"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg></button><button type="button" class="title-button explorer-toggle desktop-explorer" data-mobile="false" aria-expanded="true"><h2>探索</h2><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="5 8 14 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="fold"><polyline points="6 9 12 15 18 9"></polyline></svg></button><div id="explorer-11" class="explorer-content" aria-expanded="false" role="group"><ul class="explorer-ul overflow" id="list-0"><li class="overflow-end"></li></ul></div><template id="template-file"><li><a href="#"></a></li></template><template id="template-folder"><li><div class="folder-container"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="5 8 14 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="folder-icon"><polyline points="6 9 12 15 18 9"></polyline></svg><div><button class="folder-button"><span class="folder-title"></span></button></div></div><div class="folder-outer"><ul class="content"></ul></div></li></template></div></div><div class="center"><div class="page-header"><div class="popover-hint"><nav class="breadcrumb-container" aria-label="breadcrumbs"><div class="breadcrumb-element"><a href="../">Home</a><p> ❯ </p></div><div class="breadcrumb-element"><a href="../linux-kernel/">linux kernel</a><p> ❯ </p></div><div class="breadcrumb-element"><a href>Linux内核开发者需要关注的启动链路知识框架</a></div></nav><h1 class="article-title">Linux内核开发者需要关注的启动链路知识框架</h1><p show-comma="true" class="content-meta"><time datetime="2026-05-20T09:35:35.839Z">2026年5月20日</time><span>35分钟阅读</span></p></div></div><article class="popover-hint"><h1 id="linux-内核开发者需要关注的启动链路知识框架">Linux 内核开发者需要关注的启动链路知识框架<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#linux-内核开发者需要关注的启动链路知识框架" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h1>
+<blockquote>
+<p>关联阅读：<a href="../linux-kernel/从上电到BIOS加载操作系统内核" class="internal alias" data-slug="linux-kernel/从上电到BIOS加载操作系统内核">从上电到BIOS加载操作系统内核</a></p>
+<p>目标：从 Linux 内核开发者视角，提炼“从上电到 BIOS/UEFI 加载操作系统内核”这条链路里真正需要掌握的知识点，并把它们串成一个适合初学者的知识框架。</p>
+</blockquote>
+<h2 id="目录">目录<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#目录" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<ul>
+<li><a href="#0-%E5%85%88%E7%BB%99%E7%BB%93%E8%AE%BA%E5%86%85%E6%A0%B8%E5%BC%80%E5%8F%91%E8%80%85%E5%88%B0%E5%BA%95%E5%85%B3%E6%B3%A8%E4%BB%80%E4%B9%88" class="internal alias">0. 先给结论：内核开发者到底关注什么</a></li>
+<li><a href="#1-%E5%AD%A6%E4%B9%A0%E5%B1%82%E7%BA%A7%E5%93%AA%E4%BA%9B%E5%BF%85%E9%A1%BB%E6%87%82%E5%93%AA%E4%BA%9B%E5%8F%AA%E9%9C%80%E7%9F%A5%E9%81%93" class="internal alias">1. 学习层级：哪些必须懂，哪些只需知道</a></li>
+<li><a href="#2-%E5%90%AF%E5%8A%A8%E9%93%BE%E8%B7%AF%E4%B8%8E%E5%86%85%E6%A0%B8%E8%81%8C%E8%B4%A3%E7%9A%84%E5%88%86%E7%95%8C%E7%BA%BF" class="internal alias">2. 启动链路与内核职责的分界线</a></li>
+<li><a href="#3-%E5%BF%85%E9%A1%BB%E6%8E%8C%E6%8F%A1%E7%9A%84%E6%A0%B8%E5%BF%83%E7%9F%A5%E8%AF%86%E7%82%B9" class="internal alias">3. 必须掌握的核心知识点</a></li>
+<li><a href="#4-%E4%BB%8E%E5%8E%9F%E6%96%87%E5%BB%B6%E4%BC%B8%E5%87%BA%E7%9A%84%E6%96%B0%E7%9F%A5%E8%AF%86%E7%82%B9%E9%80%9A%E4%BF%97%E8%AF%B4%E6%98%8E" class="internal alias">4. 从原文延伸出的“新知识点”通俗说明</a></li>
+<li><a href="#5-%E5%88%9D%E5%AD%A6%E8%80%85%E5%AE%8C%E6%95%B4%E7%9F%A5%E8%AF%86%E6%A1%86%E6%9E%B6" class="internal alias">5. 初学者完整知识框架</a></li>
+<li><a href="#6-%E5%86%85%E6%A0%B8%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB%E5%85%A5%E5%8F%A3" class="internal alias">6. 内核源码阅读入口</a></li>
+<li><a href="#7-%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E5%A6%82%E4%BD%95%E6%98%A0%E5%B0%84%E5%88%B0%E7%9F%A5%E8%AF%86%E7%82%B9" class="internal alias">7. 常见问题如何映射到知识点</a></li>
+<li><a href="#8-%E8%B0%83%E8%AF%95%E6%97%B6%E9%87%8D%E7%82%B9%E7%9C%8B%E4%BB%80%E4%B9%88%E6%97%A5%E5%BF%97" class="internal alias">8. 调试时重点看什么日志</a></li>
+<li><a href="#9-%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF%E5%BB%BA%E8%AE%AE" class="internal alias">9. 学习路线建议</a></li>
+<li><a href="#10-%E4%B8%80%E5%8F%A5%E8%AF%9D%E6%80%BB%E8%A7%88" class="internal alias">10. 一句话总览</a></li>
+</ul>
+<h2 id="0-先给结论内核开发者到底关注什么">0. 先给结论：内核开发者到底关注什么<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#0-先给结论内核开发者到底关注什么" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<p>Linux 内核开发者不需要把每一路电源、每个 DRAM training 参数都研究到硬件工程师级别。更应该关注的是：</p>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="text" data-theme="github-light github-dark"><code data-language="text" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>固件和 bootloader 给了内核什么</span></span>
+<span data-line><span>  -> 内核如何相信、修正、保存这些信息</span></span>
+<span data-line><span>  -> 内核如何接管 CPU、内存、中断、设备和安全状态</span></span>
+<span data-line><span>  -> 后续驱动和子系统为什么依赖这些早期结果</span></span></code></pre></figure>
+<p>最核心的关注点有 10 类：</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="table-container"><table><thead><tr><th>优先级</th><th>知识点</th><th>为什么内核开发者要关注</th></tr></thead><tbody><tr><td>必须</td><td>Linux boot protocol</td><td>bootloader 如何把入口参数、命令行、initramfs、内存图交给内核。</td></tr><tr><td>必须</td><td><code>boot_params</code> / setup data</td><td>x86 内核早期启动的“交接清单”，很多 early boot bug 都和它有关。</td></tr><tr><td>必须</td><td>E820 / UEFI memory map</td><td>决定哪些物理内存能用，哪些必须保留。</td></tr><tr><td>必须</td><td><code>memblock</code></td><td>内核早期内存分配器，在 buddy allocator 可用前管理物理内存。</td></tr><tr><td>必须</td><td>ACPI 表</td><td>x86 服务器/PC 上，CPU、NUMA、中断、电源、PCI host bridge 等信息主要来自 ACPI。</td></tr><tr><td>必须</td><td>APIC / MADT / SMP bring-up</td><td>多核启动、中断路由、IPI、定时器和 IRQ 子系统都依赖它。</td></tr><tr><td>必须</td><td>PCIe 枚举、BAR、MMIO</td><td>设备驱动能不能访问设备寄存器，取决于资源分配和映射。</td></tr><tr><td>必须</td><td><code>initramfs</code> 与 kernel cmdline</td><td>很多“内核启动失败”其实是根文件系统、驱动、参数或早期用户态问题。</td></tr><tr><td>重要</td><td>EFI stub / UEFI runtime</td><td>UEFI 启动、变量、时间、重启、runtime memory map、Secure Boot 都会影响内核。</td></tr><tr><td>重要</td><td>Secure Boot / Lockdown / TPM</td><td>影响内核模块加载、kexec、内核调试接口、磁盘解密和可信计算。</td></tr></tbody></table></div>
+<h3 id="01-可以暂时不深究的内容">0.1 可以暂时不深究的内容<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#01-可以暂时不深究的内容" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>这些内容需要知道“存在”和“影响启动”，但初学内核时不必深入到实现细节：</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="table-container"><table><thead><tr><th>内容</th><th>初学者掌握到什么程度即可</th></tr></thead><tbody><tr><td>PSU、VRM、电源轨</td><td>知道电源稳定后 CPU 才能释放复位；不开机问题可能还没到内核。</td></tr><tr><td>EC、BMC、ME、PSP</td><td>知道它们可能早于 CPU 工作，并影响电源、固件验证、远程管理。</td></tr><tr><td>DRAM training</td><td>知道内存可用前内核还没开始；内存训练失败不是内核问题。</td></tr><tr><td>Option ROM</td><td>知道它会影响早期设备可用性，尤其 GPU、网卡、RAID/HBA。</td></tr><tr><td>Legacy BIOS 中断细节</td><td>维护老平台或 bootloader 时重要，普通内核驱动开发只需了解边界。</td></tr></tbody></table></div>
+<h2 id="1-学习层级哪些必须懂哪些只需知道">1. 学习层级：哪些必须懂，哪些只需知道<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#1-学习层级哪些必须懂哪些只需知道" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<h3 id="11-第一层内核启动必修">1.1 第一层：内核启动必修<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#11-第一层内核启动必修" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>这一层直接影响内核能否启动：</p>
+<ul>
+<li>CPU 进入内核时处于什么状态。</li>
+<li>bootloader 传给内核哪些参数。</li>
+<li>内核如何找到可用物理内存。</li>
+<li>内核如何保留 initramfs、ACPI、EFI runtime、crashkernel 等区域。</li>
+<li>内核如何建立早期页表和早期映射。</li>
+<li>内核如何解析命令行。</li>
+<li>内核如何启动第一个用户态进程。</li>
+</ul>
+<h3 id="12-第二层平台和设备初始化必修">1.2 第二层：平台和设备初始化必修<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#12-第二层平台和设备初始化必修" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>这一层影响内核接管硬件：</p>
+<ul>
+<li>ACPI 如何描述设备、CPU、NUMA、电源和中断。</li>
+<li>APIC/IOAPIC/MSI/MSI-X 如何把设备中断送到 CPU。</li>
+<li>PCIe 设备如何枚举、分配 BAR、映射 MMIO。</li>
+<li>IOMMU 如何限制 DMA。</li>
+<li>EFI runtime services 如何在内核运行后继续存在。</li>
+</ul>
+<h3 id="13-第三层安全与可信启动">1.3 第三层：安全与可信启动<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#13-第三层安全与可信启动" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>这一层影响内核安全边界：</p>
+<ul>
+<li>Secure Boot 只决定“能不能加载某些启动组件”，不等于系统整体安全。</li>
+<li>shim、MOK、签名内核、签名模块会影响发行版启动链。</li>
+<li>Lockdown 会限制 <code>/dev/mem</code>、kexec、BPF、内核调试等高风险接口。</li>
+<li>TPM PCR 度量会影响自动解密和远程证明。</li>
+<li>IMA/EVM、dm-verity、fs-verity 等是内核阶段继续建立信任链的机制。</li>
+</ul>
+<h3 id="14-第四层硬件上电背景">1.4 第四层：硬件上电背景<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#14-第四层硬件上电背景" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>这一层用于判断问题是否已经到达内核：</p>
+<ul>
+<li>完全不亮、不响、无串口：多半还没到固件。</li>
+<li>有 BIOS 画面但找不到盘：固件/硬盘/启动项问题。</li>
+<li>进入 GRUB 后失败：bootloader、内核文件、initramfs、cmdline 问题。</li>
+<li>出现内核日志后失败：才真正进入内核调试范围。</li>
+</ul>
+<h2 id="2-启动链路与内核职责的分界线">2. 启动链路与内核职责的分界线<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#2-启动链路与内核职责的分界线" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<h3 id="21-从整体看分界线">2.1 从整体看分界线<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#21-从整体看分界线" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="text" data-theme="github-light github-dark"><code data-language="text" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>硬件上电</span></span>
+<span data-line><span>  -> 固件初始化 CPU/内存/平台</span></span>
+<span data-line><span>  -> 固件选择启动项</span></span>
+<span data-line><span>  -> bootloader 或 EFI stub 加载内核</span></span>
+<span data-line><span>  -> 内核入口</span></span>
+<span data-line><span>  -> 内核解压和早期初始化</span></span>
+<span data-line><span>  -> 内核接管 CPU/内存/中断/设备</span></span>
+<span data-line><span>  -> initramfs</span></span>
+<span data-line><span>  -> 真正 rootfs</span></span>
+<span data-line><span>  -> 用户态 init</span></span></code></pre></figure>
+<p>内核开发者最关心的是：</p>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="text" data-theme="github-light github-dark"><code data-language="text" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>bootloader/EFI stub 加载内核</span></span>
+<span data-line><span>  -> 内核入口</span></span>
+<span data-line><span>  -> 内核早期初始化</span></span>
+<span data-line><span>  -> 子系统初始化</span></span></code></pre></figure>
+<h3 id="22-固件负责什么">2.2 固件负责什么<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#22-固件负责什么" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>固件主要负责：</p>
+<ul>
+<li>让 CPU 能执行代码。</li>
+<li>让 DRAM 可用。</li>
+<li>枚举或初始化必要设备。</li>
+<li>构造 ACPI、SMBIOS、内存图等系统描述信息。</li>
+<li>根据启动策略加载 bootloader 或 EFI 程序。</li>
+</ul>
+<p>通俗说，固件像“开场的舞台管理员”：把灯、电、座位、通道、演员入口准备好，但不负责演完整场戏。</p>
+<h3 id="23-bootloader-负责什么">2.3 bootloader 负责什么<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#23-bootloader-负责什么" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>bootloader 主要负责：</p>
+<ul>
+<li>读取启动菜单。</li>
+<li>找到内核文件。</li>
+<li>找到 initramfs。</li>
+<li>拼接 kernel command line。</li>
+<li>按 Linux boot protocol 填写启动参数。</li>
+<li>把控制权交给内核。</li>
+</ul>
+<p>通俗说，bootloader 像“把剧本、道具和演员送到舞台入口的人”。它不负责内核内部调度、驱动、文件系统挂载的长期逻辑。</p>
+<h3 id="24-内核负责什么">2.4 内核负责什么<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#24-内核负责什么" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>内核接手后主要负责：</p>
+<ul>
+<li>解压自身。</li>
+<li>建立页表。</li>
+<li>初始化 <code>memblock</code>，再过渡到 buddy allocator。</li>
+<li>解析 ACPI/EFI/SMBIOS/设备信息。</li>
+<li>初始化中断、定时器、SMP。</li>
+<li>初始化 driver model。</li>
+<li>挂载 initramfs。</li>
+<li>执行 <code>/init</code>。</li>
+<li>进入真正用户空间。</li>
+</ul>
+<p>通俗说，内核才是“正式接管剧场运营的人”：它不只开门，还要长期管理资源、调度工作、处理异常。</p>
+<h2 id="3-必须掌握的核心知识点">3. 必须掌握的核心知识点<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#3-必须掌握的核心知识点" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<h3 id="31-linux-boot-protocolbootloader-和内核之间的合同">3.1 Linux boot protocol：bootloader 和内核之间的合同<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#31-linux-boot-protocolbootloader-和内核之间的合同" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>Linux boot protocol 是 bootloader 与内核之间的约定。</p>
+<p>它回答这些问题：</p>
+<ul>
+<li>内核镜像应该加载到哪里？</li>
+<li>bootloader 应该把命令行放在哪里？</li>
+<li>initramfs 的地址和大小怎么告诉内核？</li>
+<li>内存图怎么传？</li>
+<li>入口地址在哪里？</li>
+<li>CPU 模式有什么要求？</li>
+</ul>
+<p>通俗理解：</p>
+<blockquote>
+<p>boot protocol 就像搬家公司和收货人之间的收货协议。内核不是只要“被复制到内存里”就能运行，还需要知道自己的包裹、说明书、场地边界都在哪里。</p>
+</blockquote>
+<p>内核开发关联点：</p>
+<ul>
+<li>早期启动参数解析。</li>
+<li>架构相关启动代码。</li>
+<li>initrd/initramfs 加载。</li>
+<li>crashkernel、KASLR、内存保留。</li>
+<li>bootloader 兼容性问题。</li>
+</ul>
+<h3 id="32-boot_params内核启动时收到的总清单">3.2 <code>boot_params</code>：内核启动时收到的总清单<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#32-boot_params内核启动时收到的总清单" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p><code>boot_params</code> 是 x86 启动时传给内核的重要数据结构。它包含：</p>
+<ul>
+<li>setup header。</li>
+<li>kernel command line 地址。</li>
+<li>initramfs 地址和大小。</li>
+<li>E820 内存图。</li>
+<li>framebuffer 信息。</li>
+<li>EFI 信息。</li>
+<li>启动设备和加载器信息。</li>
+</ul>
+<p>通俗理解：</p>
+<blockquote>
+<p><code>boot_params</code> 像开工前递给内核的“交接单”。交接单错了，内核可能把不能用的内存当成可用内存，也可能找不到 initramfs 或控制台。</p>
+</blockquote>
+<h3 id="33-e820--uefi-memory-map哪些物理内存能用">3.3 E820 / UEFI memory map：哪些物理内存能用<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#33-e820--uefi-memory-map哪些物理内存能用" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>内核不能认为所有物理地址都是 RAM。固件会告诉内核：</p>
+<ul>
+<li>哪些是可用 RAM。</li>
+<li>哪些是 ACPI 表。</li>
+<li>哪些是 MMIO。</li>
+<li>哪些是固件 runtime 区域。</li>
+<li>哪些是保留区。</li>
+<li>哪些是坏内存。</li>
+<li>哪些被 initramfs、内核、crashkernel 占用。</li>
+</ul>
+<p>通俗理解：</p>
+<blockquote>
+<p>物理地址空间像一栋楼。不是每个房间都能住人，有些是电梯井，有些是机房，有些是消防通道，有些已经被别人占用。内存图就是楼层平面图。</p>
+</blockquote>
+<p>内核开发关联点：</p>
+<ul>
+<li><code>memblock</code> 初始化。</li>
+<li>page allocator 初始化。</li>
+<li><code>ioremap()</code> 与 MMIO。</li>
+<li>ACPI NVS 保留。</li>
+<li>EFI runtime memory 保留。</li>
+<li>crashkernel 保留。</li>
+<li>memory hotplug。</li>
+</ul>
+<h3 id="34-memblockbuddy-allocator-之前的早期内存管理器">3.4 <code>memblock</code>：buddy allocator 之前的早期内存管理器<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#34-memblockbuddy-allocator-之前的早期内存管理器" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>内核刚启动时，常规内存管理还没建好，不能马上使用完整的 page allocator。此时用 <code>memblock</code> 管理早期物理内存。</p>
+<p>它负责：</p>
+<ul>
+<li>记录可用物理内存范围。</li>
+<li>记录保留物理内存范围。</li>
+<li>为页表、内核数据结构、initrd 保留空间。</li>
+<li>在 buddy allocator 初始化前提供简单分配能力。</li>
+</ul>
+<p>通俗理解：</p>
+<blockquote>
+<p><code>memblock</code> 像工地刚开工时的临时仓库管理员。正式仓储系统还没上线，它先用一张清单管理哪些地方能放材料、哪些地方不能碰。</p>
+</blockquote>
+<h3 id="35-压缩内核解压器与-kaslr">3.5 压缩内核、解压器与 KASLR<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#35-压缩内核解压器与-kaslr" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>Linux 启动时加载的 <code>vmlinuz</code> 通常是压缩镜像，不是最终运行的未压缩内核。</p>
+<p>大致流程：</p>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="text" data-theme="github-light github-dark"><code data-language="text" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>bootloader 加载压缩内核</span></span>
+<span data-line><span>  -> 进入内核自带解压器</span></span>
+<span data-line><span>  -> 选择解压目标地址</span></span>
+<span data-line><span>  -> 处理 KASLR</span></span>
+<span data-line><span>  -> 解压真正内核</span></span>
+<span data-line><span>  -> 跳转到未压缩内核入口</span></span></code></pre></figure>
+<p>通俗理解：</p>
+<blockquote>
+<p><code>vmlinuz</code> 像一个自解压安装包。bootloader 只负责把安装包放进内存，安装包自己展开成真正运行的内核。</p>
+</blockquote>
+<p>内核开发关联点：</p>
+<ul>
+<li>早期页表。</li>
+<li>随机化地址选择。</li>
+<li>initrd 避让。</li>
+<li>解压目标与内存图冲突。</li>
+<li>早期异常很难调试，因为完整 printk 还没起来。</li>
+</ul>
+<h3 id="36-efi-stub让-linux-内核自己像-uefi-程序一样启动">3.6 EFI stub：让 Linux 内核自己像 UEFI 程序一样启动<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#36-efi-stub让-linux-内核自己像-uefi-程序一样启动" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>EFI stub 让 Linux 内核能被 UEFI 当成普通 <code>.efi</code> 程序加载。</p>
+<p>它负责：</p>
+<ul>
+<li>接收 UEFI image entry。</li>
+<li>使用 UEFI boot services。</li>
+<li>读取 initrd 和 cmdline。</li>
+<li>获取 UEFI memory map。</li>
+<li>调用 <code>ExitBootServices()</code>。</li>
+<li>跳转到内核解压入口。</li>
+</ul>
+<p>通俗理解：</p>
+<blockquote>
+<p>EFI stub 像给 Linux 内核加了一个“UEFI 适配插头”。有了这个插头，固件或 systemd-boot 可以直接把内核当 EFI 程序启动。</p>
+</blockquote>
+<h3 id="37-acpix86-平台硬件描述的主渠道">3.7 ACPI：x86 平台硬件描述的主渠道<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#37-acpix86-平台硬件描述的主渠道" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>在 x86 PC/服务器上，很多硬件信息不是驱动自己猜出来的，而是固件通过 ACPI 告诉内核。</p>
+<p>ACPI 提供：</p>
+<ul>
+<li>CPU 拓扑。</li>
+<li>中断控制器。</li>
+<li>NUMA 拓扑。</li>
+<li>PCI host bridge。</li>
+<li>电源管理。</li>
+<li>热管理。</li>
+<li>电池和适配器。</li>
+<li>平台设备。</li>
+<li>IOMMU 信息。</li>
+</ul>
+<p>通俗理解：</p>
+<blockquote>
+<p>ACPI 像主板厂商写给操作系统的“硬件说明书 + 一些可执行小脚本”。内核读它，才知道很多设备在哪里、怎么开关、怎么处理中断。</p>
+</blockquote>
+<p>内核开发关联点：</p>
+<ul>
+<li><code>drivers/acpi/</code>。</li>
+<li>platform device 创建。</li>
+<li>电源管理。</li>
+<li>suspend/resume。</li>
+<li>NUMA。</li>
+<li>IOMMU。</li>
+<li>PCI root bridge。</li>
+</ul>
+<h3 id="38-madt--apic--smp多核和中断的入口">3.8 MADT / APIC / SMP：多核和中断的入口<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#38-madt--apic--smp多核和中断的入口" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>内核需要知道：</p>
+<ul>
+<li>有哪些 CPU。</li>
+<li>每个 CPU 的 APIC ID 是什么。</li>
+<li>IO APIC 在哪里。</li>
+<li>外部中断如何路由。</li>
+<li>如何发送 IPI 唤醒其他 CPU。</li>
+</ul>
+<p>这些信息很多来自 ACPI MADT。</p>
+<p>通俗理解：</p>
+<blockquote>
+<p>如果把 CPU 核看成办公室里的员工，APIC 就像每个人桌上的内部电话，IO APIC 像前台总机，MADT 是电话号码簿。</p>
+</blockquote>
+<p>内核开发关联点：</p>
+<ul>
+<li>SMP bring-up。</li>
+<li>IRQ domain。</li>
+<li>中断亲和性。</li>
+<li>MSI/MSI-X。</li>
+<li>定时器。</li>
+<li>CPU hotplug。</li>
+</ul>
+<h3 id="39-pciebar-与-mmio设备驱动访问硬件的基础">3.9 PCIe、BAR 与 MMIO：设备驱动访问硬件的基础<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#39-pciebar-与-mmio设备驱动访问硬件的基础" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>PCIe 设备通过配置空间告诉系统自己需要哪些资源。BAR 描述设备寄存器或显存窗口大小。内核最终要把这些物理地址映射成虚拟地址，驱动才能访问。</p>
+<p>通俗理解：</p>
+<blockquote>
+<p>BAR 像设备递给系统的一张“我要一个多大柜台”的申请单。系统分配地址后，驱动才能到这个柜台和设备对话。</p>
+</blockquote>
+<p>内核开发关联点：</p>
+<ul>
+<li>PCI core probe。</li>
+<li>resource tree。</li>
+<li><code>pci_enable_device()</code>。</li>
+<li><code>pci_request_region()</code>。</li>
+<li><code>ioremap()</code>。</li>
+<li>MMIO 读写顺序。</li>
+<li>DMA mask。</li>
+<li>IOMMU。</li>
+</ul>
+<h3 id="310-initramfs-与-kernel-cmdline很多启动问题的分界点">3.10 initramfs 与 kernel cmdline：很多启动问题的分界点<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#310-initramfs-与-kernel-cmdline很多启动问题的分界点" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>内核启动后不一定能直接挂载真正根文件系统。initramfs 提供早期用户空间，用来：</p>
+<ul>
+<li>加载存储驱动。</li>
+<li>解密磁盘。</li>
+<li>组装 RAID/LVM。</li>
+<li>发现 rootfs。</li>
+<li>执行 <code>switch_root</code>。</li>
+</ul>
+<p>kernel cmdline 提供启动策略，例如：</p>
+<ul>
+<li><code>root=...</code></li>
+<li><code>console=...</code></li>
+<li><code>init=...</code></li>
+<li><code>rd.luks=...</code></li>
+<li><code>iommu=...</code></li>
+<li><code>crashkernel=...</code></li>
+<li><code>panic=...</code></li>
+</ul>
+<p>通俗理解：</p>
+<blockquote>
+<p>内核像已经醒来的管理员，但真正办公室的钥匙可能在 initramfs 里。cmdline 则像启动时贴在门口的临时指令。</p>
+</blockquote>
+<h2 id="4-从原文延伸出的新知识点通俗说明">4. 从原文延伸出的“新知识点”通俗说明<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#4-从原文延伸出的新知识点通俗说明" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<p>本节不是重复原文，而是把原文中对内核开发更关键、但还需要继续学习的知识点补齐。</p>
+<h3 id="41-start_kernel内核-c-世界的主入口">4.1 <code>start_kernel()</code>：内核 C 世界的主入口<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#41-start_kernel内核-c-世界的主入口" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>内核经过汇编入口、解压、早期架构初始化后，会进入 <code>start_kernel()</code>。</p>
+<p>它大致负责：</p>
+<ul>
+<li>初始化锁、调度器、RCU、时间、内存管理等核心子系统。</li>
+<li>解析命令行。</li>
+<li>初始化 IRQ。</li>
+<li>初始化 softirq、workqueue。</li>
+<li>启动 initcall 框架。</li>
+<li>最终创建 kernel init 线程。</li>
+</ul>
+<p>通俗理解：</p>
+<blockquote>
+<p><code>start_kernel()</code> 像公司正式开门后的总调度会议：各部门按顺序建立起来，之后系统才能接收正常业务。</p>
+</blockquote>
+<p>需要串联的知识：</p>
+<ul>
+<li>汇编启动入口。</li>
+<li>早期页表。</li>
+<li><code>memblock</code>。</li>
+<li><code>printk</code>。</li>
+<li>scheduler。</li>
+<li>RCU。</li>
+<li>initcall。</li>
+</ul>
+<h3 id="42-setup_arch架构相关启动初始化">4.2 <code>setup_arch()</code>：架构相关启动初始化<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#42-setup_arch架构相关启动初始化" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p><code>setup_arch()</code> 是架构相关初始化的重要入口。x86 上它会处理：</p>
+<ul>
+<li>boot params。</li>
+<li>内存图。</li>
+<li>early cmdline。</li>
+<li>initrd 保留。</li>
+<li>ACPI/EFI 信息。</li>
+<li>CPU 信息。</li>
+<li>NUMA 信息。</li>
+<li>early ioremap。</li>
+</ul>
+<p>通俗理解：</p>
+<blockquote>
+<p><code>setup_arch()</code> 像内核进入一个具体建筑前的“现场勘察”：先确认这台机器的布局、入口、危险区域和可用资源。</p>
+</blockquote>
+<p>需要串联的知识：</p>
+<ul>
+<li>x86 boot protocol。</li>
+<li>E820。</li>
+<li>EFI memory map。</li>
+<li>ACPI。</li>
+<li>NUMA。</li>
+<li>KASLR。</li>
+</ul>
+<h3 id="43-early-param很早就生效的内核参数">4.3 early param：很早就生效的内核参数<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#43-early-param很早就生效的内核参数" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>有些内核参数必须在普通初始化前就生效，例如影响内存、控制台、ACPI、EFI、IOMMU 的参数。</p>
+<p>通俗理解：</p>
+<blockquote>
+<p>普通参数像开会时才讨论的设置；early param 像进门前就必须决定的事情，比如走哪个门、灯开不开、哪些区域不能进。</p>
+</blockquote>
+<p>需要串联的知识：</p>
+<ul>
+<li>kernel cmdline。</li>
+<li>early console。</li>
+<li>ACPI 开关。</li>
+<li>IOMMU 开关。</li>
+<li>内存保留参数。</li>
+</ul>
+<h3 id="44-early-console正式控制台之前的救命日志">4.4 early console：正式控制台之前的救命日志<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#44-early-console正式控制台之前的救命日志" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>早期启动阶段，完整 console 子系统还没初始化。early console 用非常简单的方式输出日志，例如串口、EFI framebuffer、特定 MMIO UART。</p>
+<p>通俗理解：</p>
+<blockquote>
+<p>early console 像施工现场的临时对讲机。正式电话系统还没装好，但出问题时至少能喊出来。</p>
+</blockquote>
+<p>需要串联的知识：</p>
+<ul>
+<li><code>console=...</code></li>
+<li><code>earlycon=...</code></li>
+<li>UART。</li>
+<li>MMIO。</li>
+<li>printk 初始化阶段。</li>
+</ul>
+<h3 id="45-early_ioremap早期访问-mmio-的临时窗口">4.5 <code>early_ioremap()</code>：早期访问 MMIO 的临时窗口<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#45-early_ioremap早期访问-mmio-的临时窗口" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>在完整 <code>ioremap()</code> 机制建立前，内核有时需要临时访问设备 MMIO 或固件表区域，这时会用 early ioremap 类机制。</p>
+<p>通俗理解：</p>
+<blockquote>
+<p>正式道路还没修好，<code>early_ioremap()</code> 像临时搭的一块跳板，让内核先过去读一点关键数据。</p>
+</blockquote>
+<p>需要串联的知识：</p>
+<ul>
+<li>页表。</li>
+<li>MMIO。</li>
+<li>固件表。</li>
+<li>fixmap。</li>
+<li>正式 <code>ioremap()</code>。</li>
+</ul>
+<h3 id="46-fixmap固定虚拟地址映射">4.6 fixmap：固定虚拟地址映射<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#46-fixmap固定虚拟地址映射" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>fixmap 是一段固定虚拟地址区域，用于映射早期必须访问但物理地址不固定的对象。</p>
+<p>通俗理解：</p>
+<blockquote>
+<p>fixmap 像一个固定编号的临时窗口。窗口位置固定，但后面临时接到哪个物理房间可以变化。</p>
+</blockquote>
+<p>需要串联的知识：</p>
+<ul>
+<li>虚拟地址。</li>
+<li>页表。</li>
+<li>early ioremap。</li>
+<li>APIC 映射。</li>
+<li>EFI runtime 映射。</li>
+</ul>
+<h3 id="47-ioremap把设备物理地址映射给内核访问">4.7 <code>ioremap()</code>：把设备物理地址映射给内核访问<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#47-ioremap把设备物理地址映射给内核访问" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>设备寄存器位于物理 MMIO 地址，内核不能像普通指针一样直接访问。<code>ioremap()</code> 把这段物理地址映射到内核虚拟地址空间。</p>
+<p>通俗理解：</p>
+<blockquote>
+<p>设备寄存器像一排只能通过特殊窗口办理业务的柜台。<code>ioremap()</code> 就是在内核地址空间里开这个窗口。</p>
+</blockquote>
+<p>需要串联的知识：</p>
+<ul>
+<li>PCI BAR。</li>
+<li>MMIO。</li>
+<li>缓存属性。</li>
+<li><code>readl()</code> / <code>writel()</code>。</li>
+<li>memory barrier。</li>
+</ul>
+<h3 id="48-readl--writel不是普通内存读写">4.8 <code>readl()</code> / <code>writel()</code>：不是普通内存读写<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#48-readl--writel不是普通内存读写" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>驱动访问 MMIO 寄存器时通常使用 <code>readl()</code>、<code>writel()</code> 等接口，而不是直接解引用普通指针。</p>
+<p>通俗理解：</p>
+<blockquote>
+<p>访问设备寄存器不是读写普通纸张，而是按设备规定的窗口递交命令。顺序、宽度、屏障都可能重要。</p>
+</blockquote>
+<p>需要串联的知识：</p>
+<ul>
+<li>MMIO。</li>
+<li>I/O ordering。</li>
+<li>memory barrier。</li>
+<li>posted write。</li>
+<li>DMA 同步。</li>
+</ul>
+<h3 id="49-iommu给设备-dma-加边界">4.9 IOMMU：给设备 DMA 加边界<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#49-iommu给设备-dma-加边界" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>DMA 让设备直接读写内存。IOMMU 在设备和内存之间加一层地址转换与权限控制。</p>
+<p>通俗理解：</p>
+<blockquote>
+<p>没有 IOMMU，设备像拿到整栋楼万能钥匙；有 IOMMU，设备只拿到被允许房间的门禁卡。</p>
+</blockquote>
+<p>需要串联的知识：</p>
+<ul>
+<li>DMA mapping API。</li>
+<li>PCIe。</li>
+<li>ACPI DMAR/IVRS。</li>
+<li>VFIO。</li>
+<li>virtualization。</li>
+<li>security。</li>
+</ul>
+<h3 id="410-irq-domain把硬件中断号翻译成-linux-irq">4.10 IRQ domain：把硬件中断号翻译成 Linux IRQ<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#410-irq-domain把硬件中断号翻译成-linux-irq" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>硬件中断编号和 Linux 内部 IRQ 编号不是一回事。IRQ domain 负责映射它们。</p>
+<p>通俗理解：</p>
+<blockquote>
+<p>硬件说“3 号线响了”，Linux 内部要知道这对应哪个设备、哪个处理函数。IRQ domain 就是翻译表。</p>
+</blockquote>
+<p>需要串联的知识：</p>
+<ul>
+<li>APIC。</li>
+<li>IO APIC。</li>
+<li>MSI/MSI-X。</li>
+<li>device tree 或 ACPI。</li>
+<li>interrupt controller driver。</li>
+</ul>
+<h3 id="411-initcall内核子系统按阶段初始化">4.11 initcall：内核子系统按阶段初始化<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#411-initcall内核子系统按阶段初始化" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>内核不是把所有驱动一次性随便初始化，而是通过 initcall 分级执行。</p>
+<p>常见阶段包括：</p>
+<ul>
+<li><code>early_initcall</code></li>
+<li><code>core_initcall</code></li>
+<li><code>postcore_initcall</code></li>
+<li><code>arch_initcall</code></li>
+<li><code>subsys_initcall</code></li>
+<li><code>fs_initcall</code></li>
+<li><code>device_initcall</code></li>
+<li><code>late_initcall</code></li>
+</ul>
+<p>通俗理解：</p>
+<blockquote>
+<p>initcall 像装修顺序：先打地基，再布线，再装门窗，最后摆家具。顺序错了，后面的东西会找不到依赖。</p>
+</blockquote>
+<p>需要串联的知识：</p>
+<ul>
+<li><code>start_kernel()</code>。</li>
+<li>driver model。</li>
+<li>bus/device/driver。</li>
+<li>built-in driver。</li>
+<li>module init。</li>
+</ul>
+<h3 id="412-driver-model设备驱动总线的统一模型">4.12 driver model：设备、驱动、总线的统一模型<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#412-driver-model设备驱动总线的统一模型" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>早期 ACPI/PCI 初始化之后，内核会把设备纳入 driver model。驱动通过总线匹配设备，然后 probe。</p>
+<p>通俗理解：</p>
+<blockquote>
+<p>driver model 像招聘系统：设备发布“我是谁”，驱动发布“我能管谁”，总线负责撮合，匹配上就调用 probe。</p>
+</blockquote>
+<p>需要串联的知识：</p>
+<ul>
+<li><code>struct device</code>。</li>
+<li><code>struct driver</code>。</li>
+<li><code>struct bus_type</code>。</li>
+<li>platform device。</li>
+<li>PCI device。</li>
+<li>ACPI companion。</li>
+<li>device tree。</li>
+</ul>
+<h3 id="413-firmware-bug-workaround内核经常要修固件的锅">4.13 firmware bug workaround：内核经常要修固件的锅<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#413-firmware-bug-workaround内核经常要修固件的锅" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>现实平台固件可能给出错误 ACPI、错误内存图、错误中断路由或奇怪配置。内核中有大量 quirks/workarounds。</p>
+<p>通俗理解：</p>
+<blockquote>
+<p>固件说明书有时写错。内核不能直接罢工，只能针对已知机型或已知错误加“纠错便签”。</p>
+</blockquote>
+<p>需要串联的知识：</p>
+<ul>
+<li>DMI match。</li>
+<li>ACPI quirks。</li>
+<li>PCI quirks。</li>
+<li>command line workaround。</li>
+<li>stable kernel regression。</li>
+</ul>
+<h3 id="414-kexec不经过完整固件重启直接进入新内核">4.14 kexec：不经过完整固件重启直接进入新内核<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#414-kexec不经过完整固件重启直接进入新内核" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>kexec 允许当前内核加载另一个内核并跳转过去。它绕过大部分 BIOS/UEFI 初始化。</p>
+<p>通俗理解：</p>
+<blockquote>
+<p>普通重启像关店、重新开灯、重新检查所有设施；kexec 像不关店，直接换一个经理接手。</p>
+</blockquote>
+<p>需要串联的知识：</p>
+<ul>
+<li>crashkernel。</li>
+<li>kdump。</li>
+<li>Secure Boot lockdown。</li>
+<li>DMA quiesce。</li>
+<li>CPU shutdown。</li>
+</ul>
+<h3 id="415-suspendresume启动链路的反向考试">4.15 suspend/resume：启动链路的“反向考试”<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#415-suspendresume启动链路的反向考试" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>系统睡眠和恢复时，固件、ACPI、设备驱动、电源管理都要配合。很多启动时的硬件描述在 suspend/resume 中还会再次用到。</p>
+<p>通俗理解：</p>
+<blockquote>
+<p>启动是从零开机，恢复是把暂停的机器重新叫醒。醒来后设备状态、内存、CPU、中断都要对得上。</p>
+</blockquote>
+<p>需要串联的知识：</p>
+<ul>
+<li>ACPI S-states。</li>
+<li>device power management。</li>
+<li>runtime PM。</li>
+<li>wakeup source。</li>
+<li>platform firmware。</li>
+</ul>
+<h2 id="5-初学者完整知识框架">5. 初学者完整知识框架<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#5-初学者完整知识框架" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<h3 id="51-总框架图">5.1 总框架图<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#51-总框架图" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="text" data-theme="github-light github-dark"><code data-language="text" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>硬件与固件背景</span></span>
+<span data-line><span>  电源/复位/CPU reset vector/DRAM training</span></span>
+<span data-line><span>        |</span></span>
+<span data-line><span>固件接口</span></span>
+<span data-line><span>  Legacy BIOS 或 UEFI</span></span>
+<span data-line><span>  ACPI/SMBIOS/E820/UEFI memory map</span></span>
+<span data-line><span>        |</span></span>
+<span data-line><span>启动加载</span></span>
+<span data-line><span>  MBR/ESP/GRUB/systemd-boot/EFI stub</span></span>
+<span data-line><span>  Linux boot protocol/boot_params/cmdline/initramfs</span></span>
+<span data-line><span>        |</span></span>
+<span data-line><span>内核早期执行</span></span>
+<span data-line><span>  解压/KASLR/页表/setup_arch/start_kernel/memblock</span></span>
+<span data-line><span>        |</span></span>
+<span data-line><span>平台接管</span></span>
+<span data-line><span>  ACPI/APIC/SMP/IRQ/PCI/IOMMU/EFI runtime</span></span>
+<span data-line><span>        |</span></span>
+<span data-line><span>设备与驱动</span></span>
+<span data-line><span>  driver model/bus/device/driver/probe/MMIO/DMA</span></span>
+<span data-line><span>        |</span></span>
+<span data-line><span>根文件系统与用户态</span></span>
+<span data-line><span>  initramfs/rootfs/switch_root/systemd 或其它 init</span></span>
+<span data-line><span>        |</span></span>
+<span data-line><span>安全与可靠性</span></span>
+<span data-line><span>  Secure Boot/Lockdown/TPM/IMA/kexec/kdump/suspend-resume</span></span></code></pre></figure>
+<h3 id="52-第一组启动交接">5.2 第一组：启动交接<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#52-第一组启动交接" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>要回答的问题：</p>
+<ul>
+<li>谁把内核放到内存？</li>
+<li>内核入口在哪里？</li>
+<li>内核怎么知道命令行？</li>
+<li>内核怎么知道 initramfs 在哪里？</li>
+<li>内核怎么知道哪些内存可用？</li>
+</ul>
+<p>对应知识点：</p>
+<ul>
+<li>UEFI / Legacy BIOS。</li>
+<li>GRUB / systemd-boot / EFI stub。</li>
+<li>Linux boot protocol。</li>
+<li><code>boot_params</code>。</li>
+<li>E820 / UEFI memory map。</li>
+</ul>
+<h3 id="53-第二组早期内存">5.3 第二组：早期内存<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#53-第二组早期内存" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>要回答的问题：</p>
+<ul>
+<li>页表还没完整建立时，内核怎么运行？</li>
+<li>buddy allocator 还没初始化时，内核怎么分配内存？</li>
+<li>固件保留区为什么不能覆盖？</li>
+<li>initramfs 为什么有时会和内核解压地址冲突？</li>
+</ul>
+<p>对应知识点：</p>
+<ul>
+<li>物理地址与虚拟地址。</li>
+<li>early page table。</li>
+<li><code>memblock</code>。</li>
+<li>reserved memory。</li>
+<li><code>ioremap()</code>。</li>
+<li>KASLR。</li>
+</ul>
+<h3 id="54-第三组平台描述">5.4 第三组：平台描述<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#54-第三组平台描述" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>要回答的问题：</p>
+<ul>
+<li>内核怎么知道机器有几个 CPU？</li>
+<li>内核怎么知道 PCI host bridge 在哪里？</li>
+<li>内核怎么知道中断控制器拓扑？</li>
+<li>内核怎么知道 NUMA 节点距离？</li>
+<li>内核怎么知道电源按钮、电池、温度区？</li>
+</ul>
+<p>对应知识点：</p>
+<ul>
+<li>ACPI。</li>
+<li>MADT。</li>
+<li>SRAT/SLIT。</li>
+<li>MCFG。</li>
+<li>DSDT/SSDT。</li>
+<li>SMBIOS/DMI。</li>
+</ul>
+<h3 id="55-第四组中断和多核">5.5 第四组：中断和多核<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#55-第四组中断和多核" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>要回答的问题：</p>
+<ul>
+<li>BSP 和 AP 是什么？</li>
+<li>内核如何唤醒其他 CPU？</li>
+<li>设备中断如何找到 handler？</li>
+<li>MSI/MSI-X 和 IO APIC 有什么关系？</li>
+<li>中断亲和性为什么影响性能？</li>
+</ul>
+<p>对应知识点：</p>
+<ul>
+<li>APIC / x2APIC。</li>
+<li>IO APIC。</li>
+<li>IPI。</li>
+<li>IRQ domain。</li>
+<li>SMP bring-up。</li>
+<li>CPU hotplug。</li>
+</ul>
+<h3 id="56-第五组设备和驱动">5.6 第五组：设备和驱动<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#56-第五组设备和驱动" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>要回答的问题：</p>
+<ul>
+<li>PCIe 设备怎么被发现？</li>
+<li>BAR 地址从哪里来？</li>
+<li>驱动如何访问设备寄存器？</li>
+<li>DMA 为什么要走 DMA mapping API？</li>
+<li>IOMMU 为什么会影响驱动？</li>
+</ul>
+<p>对应知识点：</p>
+<ul>
+<li>PCI core。</li>
+<li>resource tree。</li>
+<li>MMIO。</li>
+<li><code>ioremap()</code>。</li>
+<li><code>readl()</code> / <code>writel()</code>。</li>
+<li>DMA API。</li>
+<li>IOMMU。</li>
+<li>driver model。</li>
+</ul>
+<h3 id="57-第六组根文件系统和早期用户态">5.7 第六组：根文件系统和早期用户态<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#57-第六组根文件系统和早期用户态" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>要回答的问题：</p>
+<ul>
+<li>内核已经启动了，为什么还会 panic 找不到 rootfs？</li>
+<li>initramfs 到底是不是内核的一部分？</li>
+<li><code>root=UUID=...</code> 是谁解析？</li>
+<li>加密盘为什么必须依赖 initramfs？</li>
+</ul>
+<p>对应知识点：</p>
+<ul>
+<li>initramfs。</li>
+<li>kernel cmdline。</li>
+<li>VFS。</li>
+<li>block layer。</li>
+<li>device mapper。</li>
+<li>LUKS/LVM/RAID。</li>
+<li><code>switch_root</code>。</li>
+</ul>
+<h3 id="58-第七组安全和可信链">5.8 第七组：安全和可信链<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#58-第七组安全和可信链" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>要回答的问题：</p>
+<ul>
+<li>Secure Boot 为什么会影响内核模块？</li>
+<li>Lockdown 为什么会限制调试接口？</li>
+<li>TPM PCR 为什么变了会导致自动解密失败？</li>
+<li>kexec 为什么在安全启动环境里受限制？</li>
+</ul>
+<p>对应知识点：</p>
+<ul>
+<li>UEFI Secure Boot。</li>
+<li>shim/MOK。</li>
+<li>module signature。</li>
+<li>Lockdown LSM。</li>
+<li>TPM。</li>
+<li>measured boot。</li>
+<li>IMA/EVM。</li>
+<li>kexec/kdump。</li>
+</ul>
+<h2 id="6-内核源码阅读入口">6. 内核源码阅读入口<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#6-内核源码阅读入口" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<p>以下路径是学习方向，不要求一次读完。</p>
+<h3 id="61-x86-启动和解压">6.1 x86 启动和解压<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#61-x86-启动和解压" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="table-container"><table><thead><tr><th>路径</th><th>关注点</th></tr></thead><tbody><tr><td><code>arch/x86/boot/</code></td><td>x86 boot protocol、setup header、早期入口。</td></tr><tr><td><code>arch/x86/boot/compressed/</code></td><td>压缩内核解压、KASLR、EFI stub 相关路径。</td></tr><tr><td><code>arch/x86/kernel/head_64.S</code></td><td>64 位内核早期汇编入口。</td></tr><tr><td><code>arch/x86/kernel/setup.c</code></td><td><code>setup_arch()</code> 和 x86 平台早期初始化主线。</td></tr><tr><td><code>arch/x86/kernel/e820.c</code></td><td>E820 内存图处理。</td></tr></tbody></table></div>
+<h3 id="62-efi-和固件接口">6.2 EFI 和固件接口<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#62-efi-和固件接口" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="table-container"><table><thead><tr><th>路径</th><th>关注点</th></tr></thead><tbody><tr><td><code>drivers/firmware/efi/</code></td><td>EFI runtime、EFI memory map、EFI variables。</td></tr><tr><td><code>arch/x86/platform/efi/</code></td><td>x86 EFI 平台相关代码。</td></tr><tr><td><code>drivers/firmware/dmi_scan.c</code></td><td>DMI/SMBIOS 扫描和匹配。</td></tr></tbody></table></div>
+<h3 id="63-acpipci中断和-iommu">6.3 ACPI、PCI、中断和 IOMMU<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#63-acpipci中断和-iommu" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="table-container"><table><thead><tr><th>路径</th><th>关注点</th></tr></thead><tbody><tr><td><code>drivers/acpi/</code></td><td>ACPI 表解析、设备枚举、电源管理。</td></tr><tr><td><code>drivers/pci/</code></td><td>PCI 枚举、资源分配、驱动匹配。</td></tr><tr><td><code>arch/x86/kernel/apic/</code></td><td>APIC、IO APIC、中断路由。</td></tr><tr><td><code>kernel/irq/</code></td><td>通用 IRQ 子系统。</td></tr><tr><td><code>drivers/iommu/</code></td><td>IOMMU 和 DMA 地址转换。</td></tr></tbody></table></div>
+<h3 id="64-内存初始化和根文件系统">6.4 内存、初始化和根文件系统<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#64-内存初始化和根文件系统" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="table-container"><table><thead><tr><th>路径</th><th>关注点</th></tr></thead><tbody><tr><td><code>mm/memblock.c</code></td><td>早期物理内存管理。</td></tr><tr><td><code>mm/page_alloc.c</code></td><td>buddy allocator。</td></tr><tr><td><code>init/main.c</code></td><td><code>start_kernel()</code> 主线。</td></tr><tr><td><code>init/do_mounts*.c</code></td><td>rootfs 挂载逻辑。</td></tr><tr><td><code>init/initramfs.c</code></td><td>initramfs 解包和处理。</td></tr></tbody></table></div>
+<h3 id="65-驱动模型和安全">6.5 驱动模型和安全<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#65-驱动模型和安全" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="table-container"><table><thead><tr><th>路径</th><th>关注点</th></tr></thead><tbody><tr><td><code>drivers/base/</code></td><td>driver model、device、driver、bus。</td></tr><tr><td><code>kernel/module/</code></td><td>模块加载和签名相关路径。</td></tr><tr><td><code>security/lockdown/</code></td><td>Lockdown LSM。</td></tr><tr><td><code>security/integrity/</code></td><td>IMA/EVM 等完整性机制。</td></tr><tr><td><code>kernel/kexec*.c</code></td><td>kexec/kdump 相关逻辑。</td></tr></tbody></table></div>
+<h2 id="7-常见问题如何映射到知识点">7. 常见问题如何映射到知识点<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#7-常见问题如何映射到知识点" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="table-container"><table><thead><tr><th>现象</th><th>优先怀疑范围</th><th>对应知识点</th></tr></thead><tbody><tr><td>完全不亮，无串口，无 BIOS 画面</td><td>电源、主板、EC/BMC、固件早期</td><td>不属于内核调试主线。</td></tr><tr><td>BIOS 能看到盘，但 GRUB 找不到系统</td><td>启动项、ESP、bootloader 配置</td><td>UEFI、ESP、BootOrder、GRUB。</td></tr><tr><td>GRUB 能进菜单，选内核后立刻黑屏</td><td>boot protocol、内核解压、early console</td><td><code>boot_params</code>、KASLR、early console。</td></tr><tr><td>日志显示 <code>No working init found</code></td><td>initramfs 或 rootfs</td><td>initramfs、<code>init=</code>、rootfs。</td></tr><tr><td>日志显示 <code>VFS: Unable to mount root fs</code></td><td>根设备、驱动、cmdline</td><td><code>root=</code>、block driver、initramfs。</td></tr><tr><td>日志显示 ACPI 错误后设备缺失</td><td>固件表或 ACPI driver</td><td>ACPI、DSDT/SSDT、quirks。</td></tr><tr><td>PCI 设备 probe 失败</td><td>PCI resource、BAR、IOMMU、DMA</td><td>PCI core、MMIO、DMA API。</td></tr><tr><td>中断不触发或风暴</td><td>IRQ 路由、MSI、APIC</td><td>MADT、IO APIC、MSI/MSI-X、IRQ domain。</td></tr><tr><td>多核只启动一个 CPU</td><td>SMP bring-up、APIC、ACPI MADT</td><td>BSP/AP、APIC ID、MADT。</td></tr><tr><td>Secure Boot 下模块加载失败</td><td>签名和 lockdown</td><td>module signature、shim/MOK、Lockdown。</td></tr><tr><td>kexec 在安全启动环境失败</td><td>安全策略</td><td>kexec、Lockdown、Secure Boot。</td></tr><tr><td>自动解密突然失败</td><td>TPM PCR 变化</td><td>measured boot、TPM、Secure Boot、bootloader 变化。</td></tr></tbody></table></div>
+<h2 id="8-调试时重点看什么日志">8. 调试时重点看什么日志<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#8-调试时重点看什么日志" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<h3 id="81-dmesg-关键字">8.1 <code>dmesg</code> 关键字<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#81-dmesg-关键字" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>启动后优先搜索：</p>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="text" data-theme="github-light github-dark"><code data-language="text" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>Command line</span></span>
+<span data-line><span>BIOS-provided physical RAM map</span></span>
+<span data-line><span>e820</span></span>
+<span data-line><span>efi</span></span>
+<span data-line><span>ACPI:</span></span>
+<span data-line><span>SMBIOS</span></span>
+<span data-line><span>DMI:</span></span>
+<span data-line><span>initrd</span></span>
+<span data-line><span>memblock</span></span>
+<span data-line><span>Kernel Offset</span></span>
+<span data-line><span>KASLR</span></span>
+<span data-line><span>APIC</span></span>
+<span data-line><span>smpboot</span></span>
+<span data-line><span>PCI:</span></span>
+<span data-line><span>DMAR</span></span>
+<span data-line><span>IOMMU</span></span>
+<span data-line><span>Secure boot</span></span>
+<span data-line><span>Lockdown</span></span>
+<span data-line><span>VFS:</span></span></code></pre></figure>
+<h3 id="82-这些日志分别说明什么">8.2 这些日志分别说明什么<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#82-这些日志分别说明什么" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="table-container"><table><thead><tr><th>日志关键字</th><th>说明</th></tr></thead><tbody><tr><td><code>Command line</code></td><td>bootloader 最终传给内核的命令行。</td></tr><tr><td><code>BIOS-provided physical RAM map</code> / <code>e820</code></td><td>Legacy 或兼容路径下的物理内存图。</td></tr><tr><td><code>efi</code></td><td>UEFI 启动、EFI memory map、runtime services 状态。</td></tr><tr><td><code>ACPI:</code></td><td>ACPI 表加载、解释器、设备和电源管理信息。</td></tr><tr><td><code>DMI:</code></td><td>机器型号、主板、BIOS 版本，常用于定位固件 quirks。</td></tr><tr><td><code>initrd</code></td><td>initramfs/initrd 地址和大小。</td></tr><tr><td><code>memblock</code></td><td>早期内存分配和保留信息。</td></tr><tr><td><code>Kernel Offset</code></td><td>KASLR 后内核随机偏移。</td></tr><tr><td><code>APIC</code> / <code>smpboot</code></td><td>中断控制器和多核启动。</td></tr><tr><td><code>PCI:</code></td><td>PCI/PCIe 枚举和资源分配。</td></tr><tr><td><code>DMAR</code> / <code>IOMMU</code></td><td>IOMMU 初始化和 DMA remapping。</td></tr><tr><td><code>Secure boot</code> / <code>Lockdown</code></td><td>安全启动状态和内核限制策略。</td></tr><tr><td><code>VFS:</code></td><td>rootfs 挂载和早期文件系统错误。</td></tr></tbody></table></div>
+<h3 id="83-建议掌握的启动调试参数">8.3 建议掌握的启动调试参数<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#83-建议掌握的启动调试参数" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="table-container"><table><thead><tr><th>参数</th><th>用途</th></tr></thead><tbody><tr><td><code>console=ttyS0,115200n8</code></td><td>把内核日志输出到串口。</td></tr><tr><td><code>earlycon</code></td><td>启用早期控制台。</td></tr><tr><td><code>ignore_loglevel</code></td><td>尽量输出更多内核日志。</td></tr><tr><td><code>initcall_debug</code></td><td>打印 initcall 耗时和顺序。</td></tr><tr><td><code>dyndbg</code></td><td>启用动态调试输出。</td></tr><tr><td><code>acpi=off</code></td><td>临时关闭 ACPI，用于排查但不适合作为长期方案。</td></tr><tr><td><code>pci=...</code></td><td>调整 PCI 行为，用于定位枚举或资源问题。</td></tr><tr><td><code>iommu=off</code></td><td>临时关闭 IOMMU，用于定位 DMA/IOMMU 问题。</td></tr><tr><td><code>nokaslr</code></td><td>关闭 KASLR，便于调试早期地址问题。</td></tr><tr><td><code>root=...</code></td><td>指定根文件系统。</td></tr><tr><td><code>init=/bin/sh</code></td><td>绕过正常 init，进入最小用户态调试。</td></tr></tbody></table></div>
+<h2 id="9-学习路线建议">9. 学习路线建议<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#9-学习路线建议" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<h3 id="91-第一阶段先把启动链路跑通">9.1 第一阶段：先把启动链路跑通<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#91-第一阶段先把启动链路跑通" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>详细拆解见：<a href="../linux-kernel/Linux内核启动链路第一阶段：先把启动链路跑通" class="internal alias" data-slug="linux-kernel/Linux内核启动链路第一阶段：先把启动链路跑通">Linux内核启动链路第一阶段：先把启动链路跑通</a></p>
+<p>目标：</p>
+<ul>
+<li>能说清楚 BIOS/UEFI、bootloader、内核、initramfs 的分工。</li>
+<li>能看懂 <code>dmesg</code> 中 cmdline、e820、efi、ACPI、PCI 的基本日志。</li>
+<li>能判断一个启动问题发生在固件、bootloader、内核还是用户态。</li>
+</ul>
+<p>建议学习：</p>
+<ul>
+<li>UEFI 与 Legacy BIOS 区别。</li>
+<li>Linux boot protocol。</li>
+<li>kernel cmdline。</li>
+<li>initramfs。</li>
+<li>E820/UEFI memory map。</li>
+</ul>
+<h3 id="92-第二阶段理解内核早期初始化">9.2 第二阶段：理解内核早期初始化<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#92-第二阶段理解内核早期初始化" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>详细拆解见：<a href="../linux-kernel/Linux内核启动链路第二阶段：理解内核早期初始化" class="internal alias" data-slug="linux-kernel/Linux内核启动链路第二阶段：理解内核早期初始化">Linux内核启动链路第二阶段：理解内核早期初始化</a></p>
+<p>目标：</p>
+<ul>
+<li>知道压缩内核如何进入真正内核。</li>
+<li>知道 <code>setup_arch()</code> 和 <code>start_kernel()</code> 的大致职责。</li>
+<li>知道 <code>memblock</code> 为什么存在。</li>
+<li>知道早期页表、fixmap、early ioremap 的用途。</li>
+</ul>
+<p>建议学习：</p>
+<ul>
+<li><code>arch/x86/boot/</code>。</li>
+<li><code>arch/x86/boot/compressed/</code>。</li>
+<li><code>arch/x86/kernel/setup.c</code>。</li>
+<li><code>mm/memblock.c</code>。</li>
+<li><code>init/main.c</code>。</li>
+</ul>
+<h3 id="93-第三阶段理解平台和设备如何接管">9.3 第三阶段：理解平台和设备如何接管<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#93-第三阶段理解平台和设备如何接管" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>目标：</p>
+<ul>
+<li>知道 ACPI 如何生成设备。</li>
+<li>知道 PCIe 设备如何被驱动 probe。</li>
+<li>知道 BAR、MMIO、DMA、IOMMU 之间的关系。</li>
+<li>知道中断从硬件到 handler 的路径。</li>
+</ul>
+<p>建议学习：</p>
+<ul>
+<li>ACPI。</li>
+<li>PCI core。</li>
+<li>IRQ subsystem。</li>
+<li>DMA mapping API。</li>
+<li>IOMMU。</li>
+<li>driver model。</li>
+</ul>
+<h3 id="94-第四阶段理解安全和可靠性">9.4 第四阶段：理解安全和可靠性<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#94-第四阶段理解安全和可靠性" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h3>
+<p>目标：</p>
+<ul>
+<li>知道 Secure Boot 和内核签名的关系。</li>
+<li>知道 Lockdown 为什么会改变内核行为。</li>
+<li>知道 kdump/kexec 如何绕过完整固件启动。</li>
+<li>知道 suspend/resume 为什么依赖固件和驱动共同正确。</li>
+</ul>
+<p>建议学习：</p>
+<ul>
+<li>shim/MOK。</li>
+<li>module signature。</li>
+<li>Lockdown LSM。</li>
+<li>TPM measured boot。</li>
+<li>kexec/kdump。</li>
+<li>power management。</li>
+</ul>
+<h2 id="10-一句话总览">10. 一句话总览<a role="anchor" aria-hidden="true" tabindex="-1" data-no-popover="true" href="#10-一句话总览" class="internal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a></h2>
+<p>面向 Linux 内核开发者，原文中最值得关注的不是“电源怎么把机器点亮”，而是：</p>
+<figure data-rehype-pretty-code-figure><pre tabindex="0" data-language="text" data-theme="github-light github-dark"><code data-language="text" data-theme="github-light github-dark" style="display:grid;"><span data-line><span>固件和 bootloader 如何把 CPU 状态、内存布局、硬件描述、启动参数、initramfs 交给内核；</span></span>
+<span data-line><span>内核如何验证、保存、修正并消费这些信息；</span></span>
+<span data-line><span>随后如何接管内存、中断、多核、PCIe、IOMMU、驱动模型和安全策略。</span></span></code></pre></figure>
+<p>把这条线理清后，再读 <code>setup_arch()</code>、<code>start_kernel()</code>、<code>memblock</code>、ACPI、PCI、IRQ、driver model 等代码，就不再是孤立的函数和结构体，而是一条完整启动链路上的连续环节。</p></article><hr/><div class="page-footer"></div></div><div class="right sidebar"><div class="graph"><h3>关系图谱</h3><div class="graph-outer"><div class="graph-container" data-cfg="{&quot;drag&quot;:true,&quot;zoom&quot;:true,&quot;depth&quot;:1,&quot;scale&quot;:1.1,&quot;repelForce&quot;:0.5,&quot;centerForce&quot;:0.3,&quot;linkDistance&quot;:30,&quot;fontSize&quot;:0.6,&quot;opacityScale&quot;:1,&quot;showTags&quot;:true,&quot;removeTags&quot;:[],&quot;focusOnHover&quot;:false,&quot;enableRadial&quot;:false}"></div><button class="global-graph-icon" aria-label="Global Graph"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 55 55" fill="currentColor" xml:space="preserve"><path d="M49,0c-3.309,0-6,2.691-6,6c0,1.035,0.263,2.009,0.726,2.86l-9.829,9.829C32.542,17.634,30.846,17,29,17
+                s-3.542,0.634-4.898,1.688l-7.669-7.669C16.785,10.424,17,9.74,17,9c0-2.206-1.794-4-4-4S9,6.794,9,9s1.794,4,4,4
+                c0.74,0,1.424-0.215,2.019-0.567l7.669,7.669C21.634,21.458,21,23.154,21,25s0.634,3.542,1.688,4.897L10.024,42.562
+                C8.958,41.595,7.549,41,6,41c-3.309,0-6,2.691-6,6s2.691,6,6,6s6-2.691,6-6c0-1.035-0.263-2.009-0.726-2.86l12.829-12.829
+                c1.106,0.86,2.44,1.436,3.898,1.619v10.16c-2.833,0.478-5,2.942-5,5.91c0,3.309,2.691,6,6,6s6-2.691,6-6c0-2.967-2.167-5.431-5-5.91
+                v-10.16c1.458-0.183,2.792-0.759,3.898-1.619l7.669,7.669C41.215,39.576,41,40.26,41,41c0,2.206,1.794,4,4,4s4-1.794,4-4
+                s-1.794-4-4-4c-0.74,0-1.424,0.215-2.019,0.567l-7.669-7.669C36.366,28.542,37,26.846,37,25s-0.634-3.542-1.688-4.897l9.665-9.665
+                C46.042,11.405,47.451,12,49,12c3.309,0,6-2.691,6-6S52.309,0,49,0z M11,9c0-1.103,0.897-2,2-2s2,0.897,2,2s-0.897,2-2,2
+                S11,10.103,11,9z M6,51c-2.206,0-4-1.794-4-4s1.794-4,4-4s4,1.794,4,4S8.206,51,6,51z M33,49c0,2.206-1.794,4-4,4s-4-1.794-4-4
+                s1.794-4,4-4S33,46.794,33,49z M29,31c-3.309,0-6-2.691-6-6s2.691-6,6-6s6,2.691,6,6S32.309,31,29,31z M47,41c0,1.103-0.897,2-2,2
+                s-2-0.897-2-2s0.897-2,2-2S47,39.897,47,41z M49,10c-2.206,0-4-1.794-4-4s1.794-4,4-4s4,1.794,4,4S51.206,10,49,10z"></path></svg></button></div><div class="global-graph-outer"><div class="global-graph-container" data-cfg="{&quot;drag&quot;:true,&quot;zoom&quot;:true,&quot;depth&quot;:-1,&quot;scale&quot;:0.9,&quot;repelForce&quot;:0.5,&quot;centerForce&quot;:0.2,&quot;linkDistance&quot;:30,&quot;fontSize&quot;:0.6,&quot;opacityScale&quot;:1,&quot;showTags&quot;:true,&quot;removeTags&quot;:[],&quot;focusOnHover&quot;:true,&quot;enableRadial&quot;:true}"></div></div></div><div class="toc desktop-only"><button type="button" class="toc-header" aria-controls="toc-4" aria-expanded="true"><h3>目录</h3><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="fold"><polyline points="6 9 12 15 18 9"></polyline></svg></button><ul id="list-1" class="toc-content overflow"><li class="depth-0"><a href="#linux-内核开发者需要关注的启动链路知识框架" data-for="linux-内核开发者需要关注的启动链路知识框架">Linux 内核开发者需要关注的启动链路知识框架</a></li><li class="depth-1"><a href="#目录" data-for="目录">目录</a></li><li class="depth-1"><a href="#0-先给结论内核开发者到底关注什么" data-for="0-先给结论内核开发者到底关注什么">0. 先给结论：内核开发者到底关注什么</a></li><li class="depth-2"><a href="#01-可以暂时不深究的内容" data-for="01-可以暂时不深究的内容">0.1 可以暂时不深究的内容</a></li><li class="depth-1"><a href="#1-学习层级哪些必须懂哪些只需知道" data-for="1-学习层级哪些必须懂哪些只需知道">1. 学习层级：哪些必须懂，哪些只需知道</a></li><li class="depth-2"><a href="#11-第一层内核启动必修" data-for="11-第一层内核启动必修">1.1 第一层：内核启动必修</a></li><li class="depth-2"><a href="#12-第二层平台和设备初始化必修" data-for="12-第二层平台和设备初始化必修">1.2 第二层：平台和设备初始化必修</a></li><li class="depth-2"><a href="#13-第三层安全与可信启动" data-for="13-第三层安全与可信启动">1.3 第三层：安全与可信启动</a></li><li class="depth-2"><a href="#14-第四层硬件上电背景" data-for="14-第四层硬件上电背景">1.4 第四层：硬件上电背景</a></li><li class="depth-1"><a href="#2-启动链路与内核职责的分界线" data-for="2-启动链路与内核职责的分界线">2. 启动链路与内核职责的分界线</a></li><li class="depth-2"><a href="#21-从整体看分界线" data-for="21-从整体看分界线">2.1 从整体看分界线</a></li><li class="depth-2"><a href="#22-固件负责什么" data-for="22-固件负责什么">2.2 固件负责什么</a></li><li class="depth-2"><a href="#23-bootloader-负责什么" data-for="23-bootloader-负责什么">2.3 bootloader 负责什么</a></li><li class="depth-2"><a href="#24-内核负责什么" data-for="24-内核负责什么">2.4 内核负责什么</a></li><li class="depth-1"><a href="#3-必须掌握的核心知识点" data-for="3-必须掌握的核心知识点">3. 必须掌握的核心知识点</a></li><li class="depth-2"><a href="#31-linux-boot-protocolbootloader-和内核之间的合同" data-for="31-linux-boot-protocolbootloader-和内核之间的合同">3.1 Linux boot protocol：bootloader 和内核之间的合同</a></li><li class="depth-2"><a href="#32-boot_params内核启动时收到的总清单" data-for="32-boot_params内核启动时收到的总清单">3.2 boot_params：内核启动时收到的总清单</a></li><li class="depth-2"><a href="#33-e820--uefi-memory-map哪些物理内存能用" data-for="33-e820--uefi-memory-map哪些物理内存能用">3.3 E820 / UEFI memory map：哪些物理内存能用</a></li><li class="depth-2"><a href="#34-memblockbuddy-allocator-之前的早期内存管理器" data-for="34-memblockbuddy-allocator-之前的早期内存管理器">3.4 memblock：buddy allocator 之前的早期内存管理器</a></li><li class="depth-2"><a href="#35-压缩内核解压器与-kaslr" data-for="35-压缩内核解压器与-kaslr">3.5 压缩内核、解压器与 KASLR</a></li><li class="depth-2"><a href="#36-efi-stub让-linux-内核自己像-uefi-程序一样启动" data-for="36-efi-stub让-linux-内核自己像-uefi-程序一样启动">3.6 EFI stub：让 Linux 内核自己像 UEFI 程序一样启动</a></li><li class="depth-2"><a href="#37-acpix86-平台硬件描述的主渠道" data-for="37-acpix86-平台硬件描述的主渠道">3.7 ACPI：x86 平台硬件描述的主渠道</a></li><li class="depth-2"><a href="#38-madt--apic--smp多核和中断的入口" data-for="38-madt--apic--smp多核和中断的入口">3.8 MADT / APIC / SMP：多核和中断的入口</a></li><li class="depth-2"><a href="#39-pciebar-与-mmio设备驱动访问硬件的基础" data-for="39-pciebar-与-mmio设备驱动访问硬件的基础">3.9 PCIe、BAR 与 MMIO：设备驱动访问硬件的基础</a></li><li class="depth-2"><a href="#310-initramfs-与-kernel-cmdline很多启动问题的分界点" data-for="310-initramfs-与-kernel-cmdline很多启动问题的分界点">3.10 initramfs 与 kernel cmdline：很多启动问题的分界点</a></li><li class="depth-1"><a href="#4-从原文延伸出的新知识点通俗说明" data-for="4-从原文延伸出的新知识点通俗说明">4. 从原文延伸出的“新知识点”通俗说明</a></li><li class="depth-2"><a href="#41-start_kernel内核-c-世界的主入口" data-for="41-start_kernel内核-c-世界的主入口">4.1 start_kernel()：内核 C 世界的主入口</a></li><li class="depth-2"><a href="#42-setup_arch架构相关启动初始化" data-for="42-setup_arch架构相关启动初始化">4.2 setup_arch()：架构相关启动初始化</a></li><li class="depth-2"><a href="#43-early-param很早就生效的内核参数" data-for="43-early-param很早就生效的内核参数">4.3 early param：很早就生效的内核参数</a></li><li class="depth-2"><a href="#44-early-console正式控制台之前的救命日志" data-for="44-early-console正式控制台之前的救命日志">4.4 early console：正式控制台之前的救命日志</a></li><li class="depth-2"><a href="#45-early_ioremap早期访问-mmio-的临时窗口" data-for="45-early_ioremap早期访问-mmio-的临时窗口">4.5 early_ioremap()：早期访问 MMIO 的临时窗口</a></li><li class="depth-2"><a href="#46-fixmap固定虚拟地址映射" data-for="46-fixmap固定虚拟地址映射">4.6 fixmap：固定虚拟地址映射</a></li><li class="depth-2"><a href="#47-ioremap把设备物理地址映射给内核访问" data-for="47-ioremap把设备物理地址映射给内核访问">4.7 ioremap()：把设备物理地址映射给内核访问</a></li><li class="depth-2"><a href="#48-readl--writel不是普通内存读写" data-for="48-readl--writel不是普通内存读写">4.8 readl() / writel()：不是普通内存读写</a></li><li class="depth-2"><a href="#49-iommu给设备-dma-加边界" data-for="49-iommu给设备-dma-加边界">4.9 IOMMU：给设备 DMA 加边界</a></li><li class="depth-2"><a href="#410-irq-domain把硬件中断号翻译成-linux-irq" data-for="410-irq-domain把硬件中断号翻译成-linux-irq">4.10 IRQ domain：把硬件中断号翻译成 Linux IRQ</a></li><li class="depth-2"><a href="#411-initcall内核子系统按阶段初始化" data-for="411-initcall内核子系统按阶段初始化">4.11 initcall：内核子系统按阶段初始化</a></li><li class="depth-2"><a href="#412-driver-model设备驱动总线的统一模型" data-for="412-driver-model设备驱动总线的统一模型">4.12 driver model：设备、驱动、总线的统一模型</a></li><li class="depth-2"><a href="#413-firmware-bug-workaround内核经常要修固件的锅" data-for="413-firmware-bug-workaround内核经常要修固件的锅">4.13 firmware bug workaround：内核经常要修固件的锅</a></li><li class="depth-2"><a href="#414-kexec不经过完整固件重启直接进入新内核" data-for="414-kexec不经过完整固件重启直接进入新内核">4.14 kexec：不经过完整固件重启直接进入新内核</a></li><li class="depth-2"><a href="#415-suspendresume启动链路的反向考试" data-for="415-suspendresume启动链路的反向考试">4.15 suspend/resume：启动链路的“反向考试”</a></li><li class="depth-1"><a href="#5-初学者完整知识框架" data-for="5-初学者完整知识框架">5. 初学者完整知识框架</a></li><li class="depth-2"><a href="#51-总框架图" data-for="51-总框架图">5.1 总框架图</a></li><li class="depth-2"><a href="#52-第一组启动交接" data-for="52-第一组启动交接">5.2 第一组：启动交接</a></li><li class="depth-2"><a href="#53-第二组早期内存" data-for="53-第二组早期内存">5.3 第二组：早期内存</a></li><li class="depth-2"><a href="#54-第三组平台描述" data-for="54-第三组平台描述">5.4 第三组：平台描述</a></li><li class="depth-2"><a href="#55-第四组中断和多核" data-for="55-第四组中断和多核">5.5 第四组：中断和多核</a></li><li class="depth-2"><a href="#56-第五组设备和驱动" data-for="56-第五组设备和驱动">5.6 第五组：设备和驱动</a></li><li class="depth-2"><a href="#57-第六组根文件系统和早期用户态" data-for="57-第六组根文件系统和早期用户态">5.7 第六组：根文件系统和早期用户态</a></li><li class="depth-2"><a href="#58-第七组安全和可信链" data-for="58-第七组安全和可信链">5.8 第七组：安全和可信链</a></li><li class="depth-1"><a href="#6-内核源码阅读入口" data-for="6-内核源码阅读入口">6. 内核源码阅读入口</a></li><li class="depth-2"><a href="#61-x86-启动和解压" data-for="61-x86-启动和解压">6.1 x86 启动和解压</a></li><li class="depth-2"><a href="#62-efi-和固件接口" data-for="62-efi-和固件接口">6.2 EFI 和固件接口</a></li><li class="depth-2"><a href="#63-acpipci中断和-iommu" data-for="63-acpipci中断和-iommu">6.3 ACPI、PCI、中断和 IOMMU</a></li><li class="depth-2"><a href="#64-内存初始化和根文件系统" data-for="64-内存初始化和根文件系统">6.4 内存、初始化和根文件系统</a></li><li class="depth-2"><a href="#65-驱动模型和安全" data-for="65-驱动模型和安全">6.5 驱动模型和安全</a></li><li class="depth-1"><a href="#7-常见问题如何映射到知识点" data-for="7-常见问题如何映射到知识点">7. 常见问题如何映射到知识点</a></li><li class="depth-1"><a href="#8-调试时重点看什么日志" data-for="8-调试时重点看什么日志">8. 调试时重点看什么日志</a></li><li class="depth-2"><a href="#81-dmesg-关键字" data-for="81-dmesg-关键字">8.1 dmesg 关键字</a></li><li class="depth-2"><a href="#82-这些日志分别说明什么" data-for="82-这些日志分别说明什么">8.2 这些日志分别说明什么</a></li><li class="depth-2"><a href="#83-建议掌握的启动调试参数" data-for="83-建议掌握的启动调试参数">8.3 建议掌握的启动调试参数</a></li><li class="depth-1"><a href="#9-学习路线建议" data-for="9-学习路线建议">9. 学习路线建议</a></li><li class="depth-2"><a href="#91-第一阶段先把启动链路跑通" data-for="91-第一阶段先把启动链路跑通">9.1 第一阶段：先把启动链路跑通</a></li><li class="depth-2"><a href="#92-第二阶段理解内核早期初始化" data-for="92-第二阶段理解内核早期初始化">9.2 第二阶段：理解内核早期初始化</a></li><li class="depth-2"><a href="#93-第三阶段理解平台和设备如何接管" data-for="93-第三阶段理解平台和设备如何接管">9.3 第三阶段：理解平台和设备如何接管</a></li><li class="depth-2"><a href="#94-第四阶段理解安全和可靠性" data-for="94-第四阶段理解安全和可靠性">9.4 第四阶段：理解安全和可靠性</a></li><li class="depth-1"><a href="#10-一句话总览" data-for="10-一句话总览">10. 一句话总览</a></li><li class="overflow-end"></li></ul></div><div class="backlinks"><h3>反向链接</h3><ul id="list-2" class="overflow"><li><a href="../linux-kernel/Linux内核启动链路第一阶段：先把启动链路跑通" class="internal">Linux内核启动链路第一阶段：先把启动链路跑通</a></li><li><a href="../linux-kernel/Linux内核启动链路第二阶段：理解内核早期初始化" class="internal">Linux内核启动链路第二阶段：理解内核早期初始化</a></li><li class="overflow-end"></li></ul></div></div><footer class><p>Created with <a href="https://quartz.jzhao.xyz/">Quartz v4.5.2</a> © 2026</p><ul><li><a href="https://github.com/jackyzha0/quartz">GitHub</a></li><li><a href="https://discord.gg/cRFFHYye7t">Discord Community</a></li></ul></footer></div></div></body><script type="application/javascript" data-persist="true">function n(){let t=this.parentElement;t.classList.toggle("is-collapsed");let e=t.getElementsByClassName("callout-content")[0];if(!e)return;let l=t.classList.contains("is-collapsed");e.style.gridTemplateRows=l?"0fr":"1fr"}function c(){let t=document.getElementsByClassName("callout is-collapsible");for(let e of t){let l=e.getElementsByClassName("callout-title")[0],s=e.getElementsByClassName("callout-content")[0];if(!l||!s)continue;l.addEventListener("click",n),window.addCleanup(()=>l.removeEventListener("click",n));let o=e.classList.contains("is-collapsed");s.style.gridTemplateRows=o?"0fr":"1fr"}}document.addEventListener("nav",c);
+</script><script type="module" data-persist="true">function E(a,e){if(!a)return;function t(o){o.target===this&&(o.preventDefault(),o.stopPropagation(),e())}function n(o){o.key.startsWith("Esc")&&(o.preventDefault(),e())}a?.addEventListener("click",t),window.addCleanup(()=>a?.removeEventListener("click",t)),document.addEventListener("keydown",n),window.addCleanup(()=>document.removeEventListener("keydown",n))}function f(a){for(;a.firstChild;)a.removeChild(a.firstChild)}var m=class{constructor(e,t){this.container=e;this.content=t;this.setupEventListeners(),this.setupNavigationControls(),this.resetTransform()}isDragging=!1;startPan={x:0,y:0};currentPan={x:0,y:0};scale=1;MIN_SCALE=.5;MAX_SCALE=3;cleanups=[];setupEventListeners(){let e=this.onMouseDown.bind(this),t=this.onMouseMove.bind(this),n=this.onMouseUp.bind(this),o=this.onTouchStart.bind(this),r=this.onTouchMove.bind(this),i=this.onTouchEnd.bind(this),s=this.resetTransform.bind(this);this.container.addEventListener("mousedown",e),document.addEventListener("mousemove",t),document.addEventListener("mouseup",n),this.container.addEventListener("touchstart",o,{passive:!1}),document.addEventListener("touchmove",r,{passive:!1}),document.addEventListener("touchend",i),window.addEventListener("resize",s),this.cleanups.push(()=>this.container.removeEventListener("mousedown",e),()=>document.removeEventListener("mousemove",t),()=>document.removeEventListener("mouseup",n),()=>this.container.removeEventListener("touchstart",o),()=>document.removeEventListener("touchmove",r),()=>document.removeEventListener("touchend",i),()=>window.removeEventListener("resize",s))}cleanup(){for(let e of this.cleanups)e()}setupNavigationControls(){let e=document.createElement("div");e.className="mermaid-controls";let t=this.createButton("+",()=>this.zoom(.1)),n=this.createButton("-",()=>this.zoom(-.1)),o=this.createButton("Reset",()=>this.resetTransform());e.appendChild(n),e.appendChild(o),e.appendChild(t),this.container.appendChild(e)}createButton(e,t){let n=document.createElement("button");return n.textContent=e,n.className="mermaid-control-button",n.addEventListener("click",t),window.addCleanup(()=>n.removeEventListener("click",t)),n}onMouseDown(e){e.button===0&&(this.isDragging=!0,this.startPan={x:e.clientX-this.currentPan.x,y:e.clientY-this.currentPan.y},this.container.style.cursor="grabbing")}onMouseMove(e){this.isDragging&&(e.preventDefault(),this.currentPan={x:e.clientX-this.startPan.x,y:e.clientY-this.startPan.y},this.updateTransform())}onMouseUp(){this.isDragging=!1,this.container.style.cursor="grab"}onTouchStart(e){if(e.touches.length!==1)return;this.isDragging=!0;let t=e.touches[0];this.startPan={x:t.clientX-this.currentPan.x,y:t.clientY-this.currentPan.y}}onTouchMove(e){if(!this.isDragging||e.touches.length!==1)return;e.preventDefault();let t=e.touches[0];this.currentPan={x:t.clientX-this.startPan.x,y:t.clientY-this.startPan.y},this.updateTransform()}onTouchEnd(){this.isDragging=!1}zoom(e){let t=Math.min(Math.max(this.scale+e,this.MIN_SCALE),this.MAX_SCALE),n=this.content.getBoundingClientRect(),o=n.width/2,r=n.height/2,i=t-this.scale;this.currentPan.x-=o*i,this.currentPan.y-=r*i,this.scale=t,this.updateTransform()}updateTransform(){this.content.style.transform=`translate(${this.currentPan.x}px, ${this.currentPan.y}px) scale(${this.scale})`}resetTransform(){let t=this.content.querySelector("svg").getBoundingClientRect(),n=t.width/this.scale,o=t.height/this.scale;this.scale=1,this.currentPan={x:(this.container.clientWidth-n)/2,y:(this.container.clientHeight-o)/2},this.updateTransform()}},T=["--secondary","--tertiary","--gray","--light","--lightgray","--highlight","--dark","--darkgray","--codeFont"],y;document.addEventListener("nav",async()=>{let e=document.querySelector(".center").querySelectorAll("code.mermaid");if(e.length===0)return;y||=await import("https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.4.0/mermaid.esm.min.mjs");let t=y.default,n=new WeakMap;for(let r of e)n.set(r,r.innerText);async function o(){for(let s of e){s.removeAttribute("data-processed");let c=n.get(s);c&&(s.innerHTML=c)}let r=T.reduce((s,c)=>(s[c]=window.getComputedStyle(document.documentElement).getPropertyValue(c),s),{}),i=document.documentElement.getAttribute("saved-theme")==="dark";t.initialize({startOnLoad:!1,securityLevel:"loose",theme:i?"dark":"base",themeVariables:{fontFamily:r["--codeFont"],primaryColor:r["--light"],primaryTextColor:r["--darkgray"],primaryBorderColor:r["--tertiary"],lineColor:r["--darkgray"],secondaryColor:r["--secondary"],tertiaryColor:r["--tertiary"],clusterBkg:r["--light"],edgeLabelBackground:r["--highlight"]}}),await t.run({nodes:e})}await o(),document.addEventListener("themechange",o),window.addCleanup(()=>document.removeEventListener("themechange",o));for(let r=0;r<e.length;r++){let v=function(){let g=l.querySelector("#mermaid-space"),h=l.querySelector(".mermaid-content");if(!h)return;f(h);let w=i.querySelector("svg").cloneNode(!0);h.appendChild(w),l.classList.add("active"),g.style.cursor="grab",u=new m(g,h)},M=function(){l.classList.remove("active"),u?.cleanup(),u=null},i=e[r],s=i.parentElement,c=s.querySelector(".clipboard-button"),d=s.querySelector(".expand-button"),p=window.getComputedStyle(c),L=c.offsetWidth+parseFloat(p.marginLeft||"0")+parseFloat(p.marginRight||"0");d.style.right=`calc(${L}px + 0.3rem)`,s.prepend(d);let l=s.querySelector("#mermaid-container");if(!l)return;let u=null;d.addEventListener("click",v),E(l,M),window.addCleanup(()=>{u?.cleanup(),d.removeEventListener("click",v)})}});
+</script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/copy-tex.min.js" type="application/javascript" data-persist="true"></script><script src="../postscript.js" type="module" data-persist="true"></script></html>
